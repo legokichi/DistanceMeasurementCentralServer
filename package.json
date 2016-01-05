@@ -4,7 +4,7 @@
   "description": "",
   "main": "lib/index.js",
   "scripts": {
-    "start": "coffee -w -c -o lib src/index.coffee & coffee -w -c -o demo src/client.coffee & supervisor lib/index.js",
+    "start": "coffee -w -c -b -o lib src/index.coffee & coffee -w -c -b -o demo src/client.coffee & supervisor lib/index.js",
     "stop": "killall -- node /Users",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

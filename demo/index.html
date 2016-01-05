@@ -1,7 +1,10 @@
 <script src="/socket.io/socket.io.js"></script>
+<script src="RecordBuffer.js"></script>
+<script src="Signal.js"></script>
+<script src="OSC.js"></script>
 <script src="jquery.js"></script>
 <script src="client.js"></script>
-<form action="/api/push" method="post" method="POST" enctype="multipart/form-data">
+<form id="POST_FILE" action="/api/push" method="post" method="POST" enctype="multipart/form-data">
   <input type="file" name="file", value="file">
   <input type="submit" name="submit", value="submit">
 </form>
@@ -19,8 +22,6 @@
   <a href="#yellow">yellow</a>
 </p>
 <p>
-  <a href="#lime">lime</a>
-  <a href="#skyblue">skyblue</a>
-  <a href="#pink">pink</a>
-  <a href="#purple">purple</a>
+  <a href="/api/start">start</a>
+  <a href="/api/sockets", target="_blank">getSockets</a>
 </p>
