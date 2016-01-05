@@ -9,7 +9,7 @@ setup = function() {
   };
   window.addEventListener("DOMContentLoaded", changeColor);
   window.addEventListener("hashchange", changeColor);
-  window["socket"] = socket = io("localhost:8000");
+  window["socket"] = socket = io(location.hostname + ":" + location.port);
   socket.on("connect", console.info.bind(console, "connect"));
   socket.on("reconnect", console.info.bind(console, "reconnect"));
   socket.on("reconnect_attempt", console.info.bind(console, "reconnect_attempt"));
@@ -113,14 +113,22 @@ main = function() {
     return isRecording = false;
   });
   return sendRec = function(next) {
-    var o;
+    var f32arr, o;
+    f32arr = recbuf.merge();
+    console.log(f32arr);
     o = {
       id: socket.id,
       alias: location.hash.slice(1),
       pulseStartTime: pulseStartTime,
       pulseStopTime: pulseStopTime,
       sampleTimes: recbuf.sampleTimes,
-      f32arr: recbuf.merge().buffer
+      sampleRate: actx.sampleRate,
+      bufferSize: processor.bufferSize,
+      channelCount: processor.channelCount,
+      recF32arr: f32arr.buffer,
+      recF32arrLen: f32arr.length,
+      pulseF32arr: pulse.buffer,
+      pulseF32arrLen: pulse.length
     };
     recbuf.clear();
     return next(o);
@@ -143,6 +151,7 @@ _prepareRec = function(next) {
   right = function(stream) {
     var source;
     source = actx.createMediaStreamSource(stream);
+    source.connect(processor);
     processor.connect(actx.destination);
     processor.addEventListener("audioprocess", function(ev) {
       if (isRecording) {

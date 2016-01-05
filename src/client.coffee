@@ -9,7 +9,7 @@ setup = ->
   window.addEventListener("hashchange", changeColor)
 
   # sockets
-  window["socket"] = socket = io("localhost:8000")
+  window["socket"] = socket = io(location.hostname+":"+location.port)
 
   # middleware event
   socket.on "connect",           console.info.bind(console, "connect")
@@ -61,13 +61,21 @@ main = ->
   stopPulse  = (id)-> _flipProc -> pulseStopTime[id] = actx.currentTime
   stopRec    = _flipProc -> isRecording = false
   sendRec    = (next)->
+    f32arr = recbuf.merge()
+    console.log f32arr
     o =
       id: socket.id
       alias: location.hash.slice(1)
       pulseStartTime: pulseStartTime
       pulseStopTime: pulseStopTime
       sampleTimes: recbuf.sampleTimes
-      f32arr: recbuf.merge().buffer
+      sampleRate: actx.sampleRate
+      bufferSize: processor.bufferSize
+      channelCount: processor.channelCount
+      recF32arr: f32arr.buffer
+      recF32arrLen: f32arr.length
+      pulseF32arr: pulse.buffer
+      pulseF32arrLen: pulse.length
     recbuf.clear()
     next(o)
 
@@ -81,6 +89,7 @@ _prepareRec = (next)->
   left  = (err)-> throw err
   right = (stream)->
     source = actx.createMediaStreamSource(stream)
+    source.connect(processor)
     processor.connect(actx.destination)
     processor.addEventListener "audioprocess", (ev)->
       if(isRecording)

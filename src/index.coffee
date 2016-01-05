@@ -5,14 +5,14 @@ app = express()
 server = require('http').Server(app)
 io = require('socket.io')(server)
 fs = require("fs")
-experimentStartID = Date.now()
+serverStartID = Date.now()
 experimentID = null
 logs = []
 log = ->
   logs.push(Array::slice.call(arguments).join("\t"))
   console.log.apply(console, arguments)
 
-console.info("experimentStartID:", experimentStartID)
+console.info("ServerStartID:", serverStartID)
 
 api_router = express.Router();
 
@@ -32,7 +32,7 @@ api_router.post "/push", (req, res)->
   form.parse req, (err, fields, files)->
     console.info err, fields, files
     oldPath = './' + files.file._writeStream.path
-    newPath = './uploads/' + experimentID + "_" + Date.now() + "_" + files.file.name
+    newPath = './uploads/' + ServerStartID + "_" + Date.now() + "_" + files.file.name
     fs.rename oldPath, newPath, (err)-> if (err) then throw err;
   res.statusCode = 204
   res.send()
@@ -94,10 +94,92 @@ requestLinear = (eventName)->
   prms.reduce(((a, b)-> a.then -> b()), Promise.resolve())
 
 calc = (datas)->
+  expHead = serverStartID + "_" + experimentID
   datas.forEach (data)->
-    fs.writeFileSync "uploads/" + experimentStartID + "_" + experimentID + data.id + ".dat", data.f32arr
-    data.f32arr = null
-  fs.writeFileSync "uploads/" + experimentStartID + "_" + experimentID + ".json", JSON.stringify(datas, null, "  ")
-  fs.writeFileSync "uploads/" + experimentStartID + "_" + experimentID + ".log", logs.join("\n")
+    dataHead = expHead + "_" + data.id
+    fs.writeFileSync "uploads/" + dataHead + "_rec.dat", data.recF32arr
+    fs.writeFileSync "uploads/" + dataHead + "_pulse.dat", data.pulseF32arr
+    fs.writeFileSync "uploads/" + dataHead + "_rec.py", generateViewerPythonCode({fileName: dataHead+"_rec.dat", sampleRate: data.sampleRate})
+    fs.writeFileSync "uploads/" + dataHead + "_pulse.py", generateViewerPythonCode({fileName: dataHead+"_pulse.dat", sampleRate: data.sampleRate})
+    fs.writeFileSync "uploads/" + dataHead + "_detect.py", generateDetectionPythonCode({recFileName: dataHead+"_rec.dat", pulseFileName: dataHead+"_pulse.dat", sampleRate: data.sampleRate})
+    data.pulseF32arr = null
+    data.recF32arr = null
+  fs.writeFileSync "uploads/" + expHead + ".json", JSON.stringify(datas, null, "  ")
+  fs.writeFileSync "uploads/" + expHead + ".log", logs.join("\n")
+
   logs = []
   console.log(datas)
+
+PYTHON_IMPORT = """
+# coding: utf-8
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+import numpy as np
+import scipy as sp
+import sys
+import struct
+def plot(fnmtx):
+    w = len(fnmtx[0])
+    h = len(fnmtx)
+    k = 1
+    for fnarr in fnmtx:
+        for fn in fnarr:
+            plt.subplot(w,h,k)
+            fn(k)
+            k += 1
+def read_Float32Array_from_file(file_name):
+    f32arr = []
+    with open(file_name, "rb") as f:
+        while True:
+            data = f.read(4)
+            if not data: break
+            f32 = struct.unpack('f', data)
+            f32arr.append(f32[0])
+    f32arr
+"""
+generateViewerPythonCode = ({fileName, sampleRate})->
+  """
+  #{PYTHON_IMPORT}
+
+  file_name = '#{fileName}'
+  sample_rate = #{sampleRate}
+
+  print "open:" + file_name
+  f32arr = read_Float32Array_from_file(file_name)
+  print len(f32arr)
+
+  def plotPulse(id):
+      plt.plot(xrange(len(f32arr)), f32arr)
+  def plotSpecgram(id):
+      nFFT=256
+      window=sp.hamming(nFFT)
+      Pxx,freqs, bins, im = plt.specgram(f32arr,
+                                         NFFT=nFFT, Fs=sample_rate,
+                                         noverlap=nFFT-1, window=mlab.window_hanning)
+
+  plot([
+      [plotPulse, plotSpecgram]
+  ])
+  plt.show()
+  """
+
+generateDetectionPythonCode = ({recFileName, pulseFileName, sampleRate})->
+  """
+  #{PYTHON_IMPORT}
+
+  rec_file_name = '#{recFileName}'
+  pulse_file_name = '#{pulseFileName}'
+  sample_rate = #{sampleRate}
+
+  rec_f32arr = read_Float32Array_from_file(rec_file_name)
+  pulse_f32arr = read_Float32Array_from_file(pulse_file_name)
+
+  def plotAutoCorrel(id):
+    a = np.correlate(pulse_f32arr, rec_f32arr, "full")
+    plt.plot(xrange(len(a)), a)
+
+  plot([
+      [plotAutoCorrel]
+  ])
+  plt.show()
+  """
