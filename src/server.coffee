@@ -20,10 +20,14 @@ api_router.get '/sockets', (req, res)->
   res.json io.sockets.sockets.map (a)-> a.id
 
 api_router.get '/start', (req, res)->
-  experimentID = Date.now()
   res.statusCode = 204
   res.send()
   start()
+
+api_router.get '/stop', (req, res)->
+  res.statusCode = 204
+  res.send()
+  stop()
 
 api_router.post "/push", (req, res)->
   form = new formidable.IncomingForm()
@@ -50,8 +54,8 @@ io.on 'connection', (socket)->
   socket.on 'echo', (data)-> socket.emit("echo", data)
   socket.on 'event', console.info.bind(console, "event")
   socket.on 'disconnect', console.info.bind(console, "disconnect")
-  socket.on 'start', start
-
+  socket.on 'start', -> start()
+  socket.on 'stop', -> stop()
 
 server.listen(8000)
 
@@ -63,9 +67,21 @@ server.listen(8000)
 # {length: 12 , seed: [1,1,1,0,0,0,0,1,1,0,0,1], seedB: [0,1,1,1,1,0,1,1,1,1,1,1], shift: i, carrier_freq: 4000}
 # {length: 12 , seedA: [1,0,0,1,0,1,0,0,0,0,0,1], seedB: [1,0,1,1,0,1,0,1,0,1,1,1], shift: i*7, carrier_freq: 4000}
 # {length: 15 , seedA: [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1], seedB: [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1], shift: i, carrier_freq: 4410*3}
+# {length: 11 , seedA: n("01000000001"), seedB: n("00011001111"), shift: i, carrier_freq: 10000}
+# {length: 11 , seedA: n("01001001001"), seedB: n("10101010101"), shift: i, carrier_freq: 6000}
+isLooping = false
+stop = -> isLooping = false; return
 start = ->
+  if !isLooping
+    experimentID = Date.now()
+    isLooping = true
+    _loop(); return
+  else console.log "already started"
+
+_loop = ->
+  n = (a)-> a.split("").map(Number)
   Promise.resolve()
-  .then -> requestParallel "ready", {length: 12, seed: [1,1,1,0,0,0,0,1,1,0,0,1], carrier_freq: 4000}
+  .then -> requestParallel "ready", {length: 11, seed: n("01000000001"), carrier_freq: 4000}
   .then -> log "sockets", io.sockets.sockets.map (socket)-> socket.id
   .then -> requestParallel "startRec"
   .then ->
@@ -81,6 +97,7 @@ start = ->
   .then -> requestParallel "sendRec"
   .then (datas)-> calc(datas); requestParallel "collect", datas
   .then -> console.info "end"
+  .then -> if isLooping then setTimeout(_loop)
   .catch (err)-> console.error err, err.stack
 
 request = (socket, eventName, data)->

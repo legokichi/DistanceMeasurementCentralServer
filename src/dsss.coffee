@@ -34,19 +34,21 @@ window.onerror = (err)->
 
 
 # let
+VIEW_SIZE = Math.pow(2, 10)
 actx = new AudioContext()
 osc = new OSC(actx)
 analyser = actx.createAnalyser()
 analyser.smoothingTimeConstant = 0
 analyser.fftSize = 512
 processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1); # between Math.pow(2,8) and Math.pow(2,14).
-recbuf = new RecordBuffer(actx.sampleRate, processor.bufferSize, processor.channelCount)
+# need initialize
+recbuf = null
 isRecording    = false
 isBroadcasting = false
 pulseStartTime = {}
 pulseStopTime  = {}
 DSSS_SPEC = null
-VIEW_SIZE = Math.pow(2, 10)
+
 
 # main
 main = ->
@@ -67,11 +69,14 @@ ready      = ({length, seed, carrier_freq})-> (next)->
   isBroadcasting = false
   pulseStartTime = {}
   pulseStopTime  = {}
+  DSSS_SPEC = null
+
   ss_code = Signal.mseqGen(length, seed) # {1,-1}
   encoded_data = Signal.encode_chipcode([1], ss_code) # {1,0,-1}
   matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
   modulated_pulse = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0, encoded_data.length * (1/carrier_freq) * actx.sampleRate) # modulated
-  abuf = osc.createAudioBufferFromArrayBuffer(modulated_pulse, actx.sampleRate)
+  abuf = osc.createAudioBufferFromArrayBuffer(matched, actx.sampleRate)
+  #abuf = osc.createAudioBufferFromArrayBuffer(modulated_pulse, actx.sampleRate)
   DSSS_SPEC = {abuf, matched: matched.buffer, ss_code, carrier_freq, modulated_pulse_length: modulated_pulse.length}
   next()
 startRec   = (next)-> isRecording = true; next()
@@ -85,7 +90,7 @@ beepPulse  = (next)->
     if recbuf.chsBuffers[0].length > Math.ceil(modulated_pulse_length / processor.bufferSize)
     then next()
     else setTimeout(recur, 100)
-  ), (modulated_pulse_length/actx.sampleRate) * 1000)
+  ), (modulated_pulse_length/actx.sampleRate) * 1.1 * 1000)
 stopPulse  = (id)-> (next)-> pulseStopTime[id] = actx.currentTime; next()
 stopRec    = (next) -> isRecording = false; next()
 sendRec    = (next)->
@@ -129,6 +134,7 @@ collect = (datas)-> (next)->
   console.info("afterCalc")
   console.time("afterCalc")
   aliases = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
+  sampleRates = datas.reduce(((o, {id, sampleRate})-> o[id] = sampleRate; o), {})
   pulseTimes = {}
   relDelayTimes = {}
   delayTimes = {}
@@ -153,20 +159,23 @@ collect = (datas)-> (next)->
   console.timeEnd("afterCalc")
   console.info("distancesAliased", distancesAliased)
   setTimeout ->
-    results.forEach ({id, alias, results})->
+    frame_ = _craetePictureFrame "=================="
+    document.body.appendChild frame_.element
+    results.forEach ({id, alias, results, sampleRate})->
+      frame = _craetePictureFrame "#{alias}@#{id}"
+      frame_.add frame.element
       results.forEach ({id: _id, section, correl, max_offset})->
         # title
-        document.body.appendChild document.createTextNode("#{aliases[id]}<->#{aliases[_id]}")
+        _frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"
+        frame.add _frame.element
+        # result
+        _frame.add "#{distances[id][_id]}m"
         # section
         render = new Signal.Render(VIEW_SIZE, 127)
         render.drawSignal(section, true, true)
-        document.body.appendChild(render.element)
-        # correl
-        render = new Signal.Render(VIEW_SIZE, 127)
-        render.drawSignal(correl, true, true)
-        document.body.appendChild(render.element)
+        _frame.add render.element
         # offset
-        RANGE = 512
+        RANGE = Math.pow(2, 10)
         render = new Signal.Render(VIEW_SIZE, 12)
         offset_arr = new Uint8Array(correl.length)
         offset_arr[max_offset-RANGE] = 255
@@ -174,19 +183,28 @@ collect = (datas)-> (next)->
         offset_arr[max_offset+RANGE] = 255
         render.ctx.strokeStyle = "red"
         render.drawSignal(offset_arr, true, true)
-        document.body.appendChild(render.element)
+        _frame.add render.element
+        # correl
+        render = new Signal.Render(VIEW_SIZE, 127)
+        render.drawSignal(correl, true, true)
+        _frame.add render.element
         # zoom
         zoomarr = correl.subarray(max_offset-RANGE, max_offset+RANGE)
         render = new Signal.Render(VIEW_SIZE, 127)
         render.drawSignal(zoomarr, true, true)
-        document.body.appendChild(render.element)
+        _frame.add render.element
         # offset
         render = new Signal.Render(VIEW_SIZE, 12)
         offset_arr = new Uint8Array(zoomarr.length)
         offset_arr[RANGE] = 255
         render.ctx.strokeStyle = "red"
         render.drawSignal(offset_arr, true, true)
-        document.body.appendChild(render.element)
+        _frame.add render.element
+        # lowpass
+        zoomarr = _lowpass(zoomarr, sampleRates[id], 100, 1/Math.sqrt(2, 2))
+        render = new Signal.Render(VIEW_SIZE, 127)
+        render.drawSignal(zoomarr, true, true)
+        _frame.add render.element
     document.body.style.backgroundColor = "lime"
   next()
 _prepareRec = (next)->
@@ -212,6 +230,69 @@ _prepareSpect = (next)->
     rndr.drawSpectrogram(spectrums)
     requestAnimationFrame(render)
   next()
+_craetePictureFrame = (description) ->
+  fieldset = document.createElement('fieldset')
+  style = document.createElement('style')
+  style.appendChild(document.createTextNode("canvas,img{border:1px solid black;}"))
+  style.setAttribute("scoped", "scoped")
+  fieldset.appendChild(style)
+  legend = document.createElement('legend')
+  legend.appendChild(document.createTextNode(description))
+  fieldset.appendChild(legend)
+  fieldset.style.display = 'inline-block'
+  fieldset.style.backgroundColor = "#D2E0E6"
+  return {
+    element: fieldset
+    add: (element)->
+      if typeof element is "string"
+        txtNode = document.createTextNode element
+        p = document.createElement("p")
+        p.appendChild txtNode
+        fieldset.appendChild p
+      else fieldset.appendChild element
+  }
+# void lowpass(float input[], float output[], int size, float samplerate, float freq, float q)
+_lowpass = (input, sampleRate, freq, q)->
+  ###
+  // float input[]  …入力信号の格納されたバッファ。
+  // flaot output[] …フィルタ処理した値を書き出す出力信号のバッファ。
+  // int   size     …入力信号・出力信号のバッファのサイズ。
+  // float sampleRate … サンプリング周波数。
+  // float freq … カットオフ周波数。
+  // float q    … フィルタのQ値。
+  ###
+  size = input.length
+  output = new Float32Array(size)
+  # // フィルタ係数を計算する
+  omega = 2.0 * Math.PI *  freq　/　sampleRate
+  alpha = Math.sin(omega) / (2.0 * q)
+
+  a0 =  1.0 + alpha;
+  a1 = -2.0 * Math.cos(omega);
+  a2 =  1.0 - alpha;
+  b0 = (1.0 - Math.cos(omega)) / 2.0
+  b1 =  1.0 - Math.cos(omega);
+  b2 = (1.0 - Math.cos(omega)) / 2.0
+
+  # // フィルタ計算用のバッファ変数。
+  in1  = 0.0
+  in2  = 0.0
+  out1 = 0.0
+  out2 = 0.0
+
+  # // フィルタを適用
+  for i in [0..size]
+    #// 入力信号にフィルタを適用し、出力信号として書き出す。
+    output[i] = b0/a0 * input[i] + b1/a0 * in1  + b2/a0 * in2 - a1/a0 * out1 - a2/a0 * out2
+
+    in2  = in1;       #// 2つ前の入力信号を更新
+    in1  = input[i];  #// 1つ前の入力信号を更新
+
+    out2 = out1;      #// 2つ前の出力信号を更新
+    out1 = output[i]; #// 1つ前の出力信号を更新
+
+  return output
+
 
 # main proc
 window.addEventListener "DOMContentLoaded", -> _prepareRec -> _prepareSpect -> main()
