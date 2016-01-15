@@ -55,11 +55,19 @@ io.on 'connection', (socket)->
 
 server.listen(8000)
 
-
+#MSEQ_KEY = [15, [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1]]
+#MSEQ_KEY = [12, [1,0,0,1,0,1,0,0,0,0,0,1]]
+#Signal.mseqGen(MSEQ_KEY[0], MSEQ_KEY[1]) # {1,-1}
+#Signal.goldSeqGen(12, [1,0,0,1,0,1,0,0,0,0,0,1], [1,0,1,1,0,1,0,1,0,1,1,1], 3)
+#Signal.goldSeqGen(12, [1,0,0,1,0,1,0,0,0,0,0,1], [1,0,1,1,0,1,0,1,0,1,1,1], 7)
 start = ->
   Promise.resolve()
-  .then -> requestParallel "ready"
-  .then -> log "sockets", io.sockets.sockets.map (a)-> a.id
+  .then -> requestParallel "ready", io.sockets.sockets.reduce(((o, socket, i)->o[socket.id]=[
+      {length: 12 , seedA: [1,1,1,0,0,0,0,1,1,0,0,1], seedB: [0,1,1,1,1,0,1,1,1,1,1,1], shift: i, carrier_freq: 4000}
+      # {length: 12 , seedA: [1,0,0,1,0,1,0,0,0,0,0,1], seedB: [1,0,1,1,0,1,0,1,0,1,1,1], shift: i*7, carrier_freq: 4000}
+      # {length: 15 , seedA: [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1], seedB: [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1], shift: i, carrier_freq: 4410*3}
+    ]; o), {})
+  .then -> log "sockets", io.sockets.sockets.map (socket)-> socket.id
   .then -> requestParallel "startRec"
   .then ->
     prms = io.sockets.sockets.map (socket)-> ->

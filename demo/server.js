@@ -91,10 +91,21 @@ server.listen(8000);
 
 start = function() {
   return Promise.resolve().then(function() {
-    return requestParallel("ready");
+    return requestParallel("ready", io.sockets.sockets.reduce((function(o, socket, i) {
+      o[socket.id] = [
+        {
+          length: 12,
+          seedA: [1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1],
+          seedB: [0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],
+          shift: i,
+          carrier_freq: 4000
+        }
+      ];
+      return o;
+    }), {}));
   }).then(function() {
-    return log("sockets", io.sockets.sockets.map(function(a) {
-      return a.id;
+    return log("sockets", io.sockets.sockets.map(function(socket) {
+      return socket.id;
     }));
   }).then(function() {
     return requestParallel("startRec");
