@@ -72,7 +72,7 @@ start = ->
     a.catch (err)-> error err, err.stack
   .then -> requestParallel "stopRec"
   .then -> requestParallel "sendRec"
-  .then (datas)-> calc(datas)
+  .then (datas)-> calc(datas); requestParallel "collect", datas
   .then -> console.info "end"
   .catch (err)-> console.error err, err.stack
 
@@ -93,22 +93,21 @@ requestLinear = (eventName)->
   prms = io.sockets.sockets.map (socket)-> -> request(socket, eventName, data)
   prms.reduce(((a, b)-> a.then -> b()), Promise.resolve())
 
-calc = (datas)->
+calc = (datas, next)->
   expHead = serverStartID + "_" + experimentID
   datas.forEach (data)->
     dataHead = expHead + "_" + data.id
-    fs.writeFileSync "uploads/" + dataHead + "_rec.dat", data.recF32arr
-    fs.writeFileSync "uploads/" + dataHead + "_pulse.dat", data.pulseF32arr
-    fs.writeFileSync "uploads/" + dataHead + "_rec.py", generateViewerPythonCode({fileName: dataHead+"_rec.dat", sampleRate: data.sampleRate})
-    fs.writeFileSync "uploads/" + dataHead + "_pulse.py", generateViewerPythonCode({fileName: dataHead+"_pulse.dat", sampleRate: data.sampleRate})
-    fs.writeFileSync "uploads/" + dataHead + "_detect.py", generateDetectionPythonCode({recFileName: dataHead+"_rec.dat", pulseFileName: dataHead+"_pulse.dat", sampleRate: data.sampleRate})
-    data.pulseF32arr = null
-    data.recF32arr = null
-  fs.writeFileSync "uploads/" + expHead + ".json", JSON.stringify(datas, null, "  ")
-  fs.writeFileSync "uploads/" + expHead + ".log", logs.join("\n")
+    #fs.writeFileSync "uploads/" + dataHead + "_rec.dat", data.recF32arr
+    #fs.writeFileSync "uploads/" + dataHead + "_mached.dat", data.MATCHEDarr
+    #fs.writeFileSync "uploads/" + dataHead + "_rec.py", generateViewerPythonCode({fileName: dataHead+"_rec.dat", sampleRate: data.sampleRate})
+    #fs.writeFileSync "uploads/" + dataHead + "_mached.py", generateViewerPythonCode({fileName: dataHead+"_mached.dat", sampleRate: data.sampleRate})
+    #fs.writeFileSync "uploads/" + dataHead + "_detect.py", generateDetectionPythonCode({recFileName: dataHead+"_rec.dat", machedFileName: dataHead+"_mached.dat", sampleRate: data.sampleRate})
+  #fs.writeFileSync "uploads/" + expHead + ".json", JSON.stringify(datas, null, "  ")
+  #fs.writeFileSync "uploads/" + expHead + ".log", logs.join("\n")
 
   logs = []
   console.log(datas)
+
 
 PYTHON_IMPORT = """
 # coding: utf-8
@@ -163,12 +162,12 @@ generateViewerPythonCode = ({fileName, sampleRate})->
   plt.show()
   """
 
-generateDetectionPythonCode = ({recFileName, pulseFileName, sampleRate})->
+generateDetectionPythonCode = ({recFileName, machedFileName, sampleRate})->
   """
   #{PYTHON_IMPORT}
 
   rec_file_name = '#{recFileName}'
-  pulse_file_name = '#{pulseFileName}'
+  pulse_file_name = '#{machedFileName}'
   sample_rate = #{sampleRate}
 
   rec_f32arr = read_Float32Array_from_file(rec_file_name)

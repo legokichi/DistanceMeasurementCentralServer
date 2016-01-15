@@ -67,31 +67,25 @@ pulseStartTime = {};
 
 pulseStopTime = {};
 
-CARRIER_FREQ = 4410;
+CARRIER_FREQ = 4410 / 2;
 
-MSEQ_KEY = [15, [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]];
+MSEQ_KEY = [12, [1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1]];
 
 SS_CODE = Signal.mseqGen(MSEQ_KEY[0], MSEQ_KEY[1]);
-
-console.log(SS_CODE.length);
 
 ENCODED_DATA = Signal.encode_chipcode([1], SS_CODE);
 
 MATCHED = Signal.BPSK(SS_CODE, CARRIER_FREQ, actx.sampleRate, 0);
 
-console.log(MATCHED.length);
-
 MODULATED_PULSE = Signal.BPSK(ENCODED_DATA, CARRIER_FREQ, actx.sampleRate, 0, ENCODED_DATA.length * (1 / CARRIER_FREQ) * actx.sampleRate);
-
-console.log(ENCODED_DATA.length);
 
 console.log(abuf = osc.createAudioBufferFromArrayBuffer(MODULATED_PULSE, actx.sampleRate));
 
-VIEW_SIZE = Math.pow(2, 12);
+VIEW_SIZE = Math.pow(2, 10);
 
 main = function() {
-  var beepPulse, ready, sendRec, startPulse, startRec, stopPulse, stopRec;
-  (function() {
+  var beepPulse, collect, notdo, ready, sendRec, startPulse, startRec, stopPulse, stopRec;
+  notdo = function() {
     var correl, render;
     correl = Signal.fft_smart_overwrap_correlation(ENCODED_DATA, SS_CODE);
     render = new Signal.Render(VIEW_SIZE, 127);
@@ -107,7 +101,7 @@ main = function() {
     render = new Signal.Render(VIEW_SIZE, 127);
     render.drawSignal(correl, true, true);
     return document.body.appendChild(render.element);
-  })();
+  };
   socket.on("ready", function() {
     return ready(function() {
       return socket.emit("ready");
@@ -143,6 +137,11 @@ main = function() {
       return socket.emit("sendRec", a);
     });
   });
+  socket.on("collect", function(a) {
+    return collect(a)(function() {
+      return socket.emit("collect");
+    });
+  });
   ready = function(next) {
     return next();
   };
@@ -175,40 +174,25 @@ main = function() {
   stopRec = _flipProc(function() {
     return isRecording = false;
   });
-  return sendRec = function(next) {
-    var f32arr, o;
+  sendRec = function(next) {
+    var f32arr, o, recStartTime, recStopTime, startStops;
     f32arr = recbuf.merge();
-    Object.keys(pulseStartTime).forEach(function(id) {
-      var correl, max_offset, max_score, recStartTime, recStopTime, ref, section, startPtr, stopPtr;
-      recStartTime = recbuf.sampleTimes[0] - (recbuf.bufferSize / recbuf.sampleRate);
-      recStopTime = recbuf.sampleTimes[recbuf.sampleTimes.length - 1];
+    recStartTime = recbuf.sampleTimes[0] - (recbuf.bufferSize / recbuf.sampleRate);
+    recStopTime = recbuf.sampleTimes[recbuf.sampleTimes.length - 1];
+    startStops = Object.keys(pulseStartTime).map(function(id) {
+      var startPtr, stopPtr;
       startPtr = (pulseStartTime[id] - recStartTime) * recbuf.sampleRate;
       stopPtr = (pulseStopTime[id] - recStartTime) * recbuf.sampleRate;
-      section = f32arr.subarray(startPtr, stopPtr);
-      correl = Signal.fft_smart_overwrap_correlation(section, MATCHED);
-      console.log((ref = Signal.Statictics.findMax(correl), max_score = ref[0], max_offset = ref[1], ref));
-      console.log(Signal.Statictics.stdev(correl));
-      console.log(Signal.Statictics.stdscore(correl, max_score));
-      return (function() {
-        var offset_arr, render;
-        document.body.appendChild(document.createTextNode(id + "@" + socket.id + location.hash));
-        render = new Signal.Render(VIEW_SIZE, 127);
-        render.drawSignal(section, true, true);
-        document.body.appendChild(render.element);
-        render = new Signal.Render(VIEW_SIZE, 127);
-        render.drawSignal(correl, true, true);
-        document.body.appendChild(render.element);
-        render = new Signal.Render(VIEW_SIZE, 12);
-        offset_arr = new Uint8Array(correl.length);
-        offset_arr[max_offset] = 255;
-        render.ctx.strokeStyle = "red";
-        render.drawSignal(offset_arr, true, true);
-        return document.body.appendChild(render.element);
-      })();
+      return {
+        id: id,
+        startPtr: startPtr,
+        stopPtr: stopPtr
+      };
     });
     o = {
       id: socket.id,
       alias: location.hash.slice(1),
+      startStops: startStops,
       pulseStartTime: pulseStartTime,
       pulseStopTime: pulseStopTime,
       sampleTimes: recbuf.sampleTimes,
@@ -219,10 +203,128 @@ main = function() {
       recF32arrLen: f32arr.length,
       MATCHEDarr: MATCHED.buffer,
       MATCHEDLen: MATCHED.length,
-      MSEQ_KEY: MSEQ_KEY
+      MSEQ_KEY: MSEQ_KEY,
+      SS_CODE: SS_CODE,
+      CARRIER_FREQ: CARRIER_FREQ
     };
     recbuf.clear();
     return next(o);
+  };
+  return collect = function(datas) {
+    return function(next) {
+      var aliases, delayTimes, distances, distancesAliased, pulseTimes, relDelayTimes, results;
+      if (location.hash.slice(1) !== "red") {
+        return next();
+      }
+      console.log(datas);
+      aliases = datas.reduce((function(o, arg) {
+        var alias, id;
+        id = arg.id, alias = arg.alias;
+        o[id] = alias;
+        return o;
+      }), {});
+      console.time("calc");
+      results = datas.map(function(arg) {
+        var MATCHEDarr, _results, alias, id, recF32arr, sampleRate, startStops;
+        id = arg.id, alias = arg.alias, startStops = arg.startStops, recF32arr = arg.recF32arr, MATCHEDarr = arg.MATCHEDarr, sampleRate = arg.sampleRate;
+        _results = startStops.map(function(arg1) {
+          var _id, correl, max_offset, max_score, pulseTime, ref, section, startPtr, stdev, stdscore, stopPtr;
+          _id = arg1.id, startPtr = arg1.startPtr, stopPtr = arg1.stopPtr;
+          section = new Float32Array(recF32arr).subarray(startPtr, stopPtr);
+          correl = Signal.fft_smart_overwrap_correlation(section, new Float32Array(MATCHEDarr));
+          console.log(id, _id);
+          console.log((ref = Signal.Statictics.findMax(correl), max_score = ref[0], max_offset = ref[1], ref));
+          console.log(stdev = Signal.Statictics.stdev(correl));
+          console.log(stdscore = Signal.Statictics.stdscore(correl, max_score));
+          console.log(pulseTime = (startPtr + max_offset) / sampleRate);
+          return {
+            id: _id,
+            section: section,
+            correl: correl,
+            max_score: max_score,
+            max_offset: max_offset,
+            stdev: stdev,
+            stdscore: stdscore,
+            pulseTime: pulseTime
+          };
+        });
+        return {
+          id: id,
+          alias: alias,
+          results: _results
+        };
+      });
+      pulseTimes = {};
+      relDelayTimes = {};
+      delayTimes = {};
+      distances = {};
+      distancesAliased = {};
+      results.forEach(function(arg) {
+        var alias, id, results;
+        id = arg.id, alias = arg.alias, results = arg.results;
+        return results.forEach(function(arg1) {
+          var _id, correl, max_offset, max_score, pulseTime, section, stdev, stdscore;
+          _id = arg1.id, section = arg1.section, correl = arg1.correl, max_score = arg1.max_score, max_offset = arg1.max_offset, stdev = arg1.stdev, stdscore = arg1.stdscore, pulseTime = arg1.pulseTime;
+          pulseTimes[id] = pulseTimes[id] || {};
+          return pulseTimes[id][_id] = pulseTime;
+        });
+      });
+      Object.keys(pulseTimes).forEach(function(id1) {
+        return Object.keys(pulseTimes).forEach(function(id2) {
+          relDelayTimes[id1] = relDelayTimes[id1] || {};
+          return relDelayTimes[id1][id2] = pulseTimes[id1][id2] - pulseTimes[id1][id1];
+        });
+      });
+      Object.keys(pulseTimes).forEach(function(id1) {
+        return Object.keys(pulseTimes).forEach(function(id2) {
+          delayTimes[id1] = delayTimes[id1] || {};
+          delayTimes[id1][id2] = Math.abs(Math.abs(relDelayTimes[id1][id2]) - Math.abs(relDelayTimes[id2][id1]));
+          distances[id1] = distances[id1] || {};
+          distances[id1][id2] = delayTimes[id1][id2] / 2 * 340;
+          distancesAliased[aliases[id1]] = distancesAliased[aliases[id1]] || {};
+          return distancesAliased[aliases[id1]][aliases[id2]] = delayTimes[id1][id2] / 2 * 340;
+        });
+      });
+      console.timeEnd("calc");
+      console.info("distancesAliased", distancesAliased);
+      setTimeout(function() {
+        results.forEach(function(arg) {
+          var alias, id, results;
+          id = arg.id, alias = arg.alias, results = arg.results;
+          return results.forEach(function(arg1) {
+            var _id, correl, max_offset, max_score, offset_arr, pulseTime, render, section, stdev, stdscore, zoomarr;
+            _id = arg1.id, section = arg1.section, correl = arg1.correl, max_score = arg1.max_score, max_offset = arg1.max_offset, stdev = arg1.stdev, stdscore = arg1.stdscore, pulseTime = arg1.pulseTime;
+            document.body.appendChild(document.createTextNode(aliases[id] + "@" + aliases[_id] + "(" + id + "@" + _id + ")"));
+            render = new Signal.Render(VIEW_SIZE, 127);
+            render.drawSignal(section, true, true);
+            document.body.appendChild(render.element);
+            render = new Signal.Render(VIEW_SIZE, 127);
+            render.drawSignal(correl, true, true);
+            document.body.appendChild(render.element);
+            render = new Signal.Render(VIEW_SIZE, 12);
+            offset_arr = new Uint8Array(correl.length);
+            offset_arr[max_offset - 256] = 255;
+            offset_arr[max_offset] = 255;
+            offset_arr[max_offset + 256] = 255;
+            render.ctx.strokeStyle = "red";
+            render.drawSignal(offset_arr, true, true);
+            document.body.appendChild(render.element);
+            zoomarr = correl.subarray(max_offset - 256, max_offset + 256);
+            render = new Signal.Render(VIEW_SIZE, 127);
+            render.drawSignal(zoomarr, true, true);
+            document.body.appendChild(render.element);
+            render = new Signal.Render(VIEW_SIZE, 12);
+            offset_arr = new Uint8Array(zoomarr.length);
+            offset_arr[256] = 255;
+            render.ctx.strokeStyle = "red";
+            render.drawSignal(offset_arr, true, true);
+            return document.body.appendChild(render.element);
+          });
+        });
+        return document.body.style.backgroundColor = "lime";
+      });
+      return next();
+    };
   };
 };
 
@@ -234,7 +336,6 @@ _prepareRec = function(next) {
   right = function(stream) {
     var source;
     source = actx.createMediaStreamSource(stream);
-    source.connect(analyser);
     source.connect(processor);
     processor.connect(actx.destination);
     processor.addEventListener("audioprocess", function(ev) {
@@ -251,26 +352,25 @@ _prepareRec = function(next) {
 };
 
 _prepareSpect = function(next) {
-  var i, render, rndr, spectrums, targetIndex;
+  var donot, i, render, rndr, spectrums, targetIndex;
   targetIndex = (CARRIER_FREQ * analyser.fftSize) / actx.sampleRate | 0;
   spectrums = (function() {
-    var j, ref, results;
-    results = [];
+    var j, ref, results1;
+    results1 = [];
     for (i = j = 0, ref = analyser.frequencyBinCount; 0 <= ref ? j <= ref : j >= ref; i = 0 <= ref ? ++j : --j) {
-      results.push(new Uint8Array(analyser.frequencyBinCount));
+      results1.push(new Uint8Array(analyser.frequencyBinCount));
     }
-    return results;
+    return results1;
   })();
   rndr = new Signal.Render(spectrums.length, spectrums[0].length);
-  document.body.appendChild(rndr.element);
-  (render = function() {
+  donot = render = function() {
     var spectrum;
     spectrum = spectrums.shift();
     analyser.getByteFrequencyData(spectrum);
     spectrums.push(spectrum);
     rndr.drawSpectrogram(spectrums);
     return requestAnimationFrame(render);
-  })();
+  };
   return next();
 };
 

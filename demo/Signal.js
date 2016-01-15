@@ -306,7 +306,7 @@ var RFFT = (function (_super) {
         this.reverseBinPermute(x, buffer);
         /*
         var reverseTable = this.reverseTable;
-    
+
         for (var k = 0, len = reverseTable.length; k < len; k++) {
           x[k] = buffer[reverseTable[k]];
         }
@@ -925,8 +925,8 @@ function fft_smart_overwrap_correlation(signalA, signalB) {
     for (var i = 0; (long.length - (i + slideWidth)) >= 0; i += slideWidth) {
         var resized_long = new Float32Array(resized_short.length);
         resized_long.set(long.subarray(i, i + windowSize), 0); //resized_short.length/4);
-        //let corr = fft_correlation(resized_short, resized_long);
-        var corr = phase_only_filter(resized_short, resized_long);
+        var corr = fft_correlation(resized_short, resized_long);
+        //var corr = phase_only_filter(resized_short, resized_long);
         /*
           let render = new Render(resized_long.length, 127)
           render.drawSignal(resized_long, true, true);

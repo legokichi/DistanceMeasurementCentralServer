@@ -126,7 +126,8 @@ start = function() {
   }).then(function() {
     return requestParallel("sendRec");
   }).then(function(datas) {
-    return calc(datas);
+    calc(datas);
+    return requestParallel("collect", datas);
   }).then(function() {
     return console.info("end");
   })["catch"](function(err) {
@@ -168,32 +169,13 @@ requestLinear = function(eventName) {
   }), Promise.resolve());
 };
 
-calc = function(datas) {
+calc = function(datas, next) {
   var expHead;
   expHead = serverStartID + "_" + experimentID;
   datas.forEach(function(data) {
     var dataHead;
-    dataHead = expHead + "_" + data.id;
-    fs.writeFileSync("uploads/" + dataHead + "_rec.dat", data.recF32arr);
-    fs.writeFileSync("uploads/" + dataHead + "_pulse.dat", data.pulseF32arr);
-    fs.writeFileSync("uploads/" + dataHead + "_rec.py", generateViewerPythonCode({
-      fileName: dataHead + "_rec.dat",
-      sampleRate: data.sampleRate
-    }));
-    fs.writeFileSync("uploads/" + dataHead + "_pulse.py", generateViewerPythonCode({
-      fileName: dataHead + "_pulse.dat",
-      sampleRate: data.sampleRate
-    }));
-    fs.writeFileSync("uploads/" + dataHead + "_detect.py", generateDetectionPythonCode({
-      recFileName: dataHead + "_rec.dat",
-      pulseFileName: dataHead + "_pulse.dat",
-      sampleRate: data.sampleRate
-    }));
-    data.pulseF32arr = null;
-    return data.recF32arr = null;
+    return dataHead = expHead + "_" + data.id;
   });
-  fs.writeFileSync("uploads/" + expHead + ".json", JSON.stringify(datas, null, "  "));
-  fs.writeFileSync("uploads/" + expHead + ".log", logs.join("\n"));
   logs = [];
   return console.log(datas);
 };
@@ -207,7 +189,7 @@ generateViewerPythonCode = function(arg) {
 };
 
 generateDetectionPythonCode = function(arg) {
-  var pulseFileName, recFileName, sampleRate;
-  recFileName = arg.recFileName, pulseFileName = arg.pulseFileName, sampleRate = arg.sampleRate;
-  return PYTHON_IMPORT + "\n\nrec_file_name = '" + recFileName + "'\npulse_file_name = '" + pulseFileName + "'\nsample_rate = " + sampleRate + "\n\nrec_f32arr = read_Float32Array_from_file(rec_file_name)\npulse_f32arr = read_Float32Array_from_file(pulse_file_name)\n\ndef plotAutoCorrel(id):\n  a = np.correlate(pulse_f32arr, rec_f32arr, \"full\")\n  plt.plot(xrange(len(a)), a)\n\nplot([\n    [plotAutoCorrel]\n])\nplt.show()";
+  var machedFileName, recFileName, sampleRate;
+  recFileName = arg.recFileName, machedFileName = arg.machedFileName, sampleRate = arg.sampleRate;
+  return PYTHON_IMPORT + "\n\nrec_file_name = '" + recFileName + "'\npulse_file_name = '" + machedFileName + "'\nsample_rate = " + sampleRate + "\n\nrec_f32arr = read_Float32Array_from_file(rec_file_name)\npulse_f32arr = read_Float32Array_from_file(pulse_file_name)\n\ndef plotAutoCorrel(id):\n  a = np.correlate(pulse_f32arr, rec_f32arr, \"full\")\n  plt.plot(xrange(len(a)), a)\n\nplot([\n    [plotAutoCorrel]\n])\nplt.show()";
 };
