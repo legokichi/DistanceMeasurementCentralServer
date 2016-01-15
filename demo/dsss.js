@@ -125,7 +125,7 @@ ready = function(data) {
     DSSS_SPECS = data[socket.id].map(function(arg, i) {
       var abuf, carrier_freq, encoded_data, length, matched, modulated_pulse, seedA, seedB, shift, ss_code;
       length = arg.length, seedA = arg.seedA, seedB = arg.seedB, shift = arg.shift, carrier_freq = arg.carrier_freq;
-      ss_code = Signal.mseqGen(length, seedA);
+      ss_code = Signal.goldSeqGen(length, seedA, seedB, shift);
       encoded_data = Signal.encode_chipcode([1], ss_code);
       matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0);
       modulated_pulse = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0, encoded_data.length * (1 / carrier_freq) * actx.sampleRate);

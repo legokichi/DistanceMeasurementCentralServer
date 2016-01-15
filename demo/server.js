@@ -90,15 +90,25 @@ io.on('connection', function(socket) {
 server.listen(8000);
 
 start = function() {
+  var n;
+  n = function(a) {
+    return a.split("").map(Number);
+  };
   return Promise.resolve().then(function() {
     return requestParallel("ready", io.sockets.sockets.reduce((function(o, socket, i) {
       o[socket.id] = [
         {
-          length: 12,
-          seedA: [1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1],
-          seedB: [0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],
+          length: 11,
+          seedA: n("01000000001"),
+          seedB: n("00011001111"),
           shift: i,
-          carrier_freq: 4000
+          carrier_freq: 10000
+        }, {
+          length: 11,
+          seedA: n("01001001001"),
+          seedB: n("10101010101"),
+          shift: i,
+          carrier_freq: 6000
         }
       ];
       return o;

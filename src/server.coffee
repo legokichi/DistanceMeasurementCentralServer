@@ -61,10 +61,13 @@ server.listen(8000)
 #Signal.goldSeqGen(12, [1,0,0,1,0,1,0,0,0,0,0,1], [1,0,1,1,0,1,0,1,0,1,1,1], 3)
 #Signal.goldSeqGen(12, [1,0,0,1,0,1,0,0,0,0,0,1], [1,0,1,1,0,1,0,1,0,1,1,1], 7)
 start = ->
+  n = (a)-> a.split("").map(Number)
   Promise.resolve()
   .then -> requestParallel "ready", io.sockets.sockets.reduce(((o, socket, i)->o[socket.id]=[
-      {length: 12 , seedA: [1,1,1,0,0,0,0,1,1,0,0,1], seedB: [0,1,1,1,1,0,1,1,1,1,1,1], shift: i, carrier_freq: 4000}
-      # {length: 12 , seedA: [1,0,0,1,0,1,0,0,0,0,0,1], seedB: [1,0,1,1,0,1,0,1,0,1,1,1], shift: i*7, carrier_freq: 4000}
+    {length: 11 , seedA: n("01000000001"), seedB: n("00011001111"), shift: i, carrier_freq: 10000}
+    {length: 11 , seedA: n("01001001001"), seedB: n("10101010101"), shift: i, carrier_freq: 6000}
+      # {length: 12 , seedA: [1,1,1,0,0,0,0,1,1,0,0,1], seedB: [0,1,1,1,1,0,1,1,1,1,1,1], shift: i, carrier_freq: 4000}
+      # {length: 12 , seedA: [1,0,0,1,0,1,0,0,0,0,0,1], seedB: [1,0,1,1,0,1,0,1,0,1,1,1], shift: i*7, carrier_freq: 2000}
       # {length: 15 , seedA: [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1], seedB: [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1], shift: i, carrier_freq: 4410*3}
     ]; o), {})
   .then -> log "sockets", io.sockets.sockets.map (socket)-> socket.id
