@@ -45,7 +45,7 @@ isRecording    = false
 isBroadcasting = false
 pulseStartTime = {}
 pulseStopTime  = {}
-DSSS_SPECS = []
+DSSS_SPEC = null
 VIEW_SIZE = Math.pow(2, 10)
 
 # main
@@ -60,37 +60,32 @@ main = ->
   socket.on "collect",    (a)-> collect(a)    -> socket.emit("collect")
 
 # where
-ready      = (data)-> (next)->
+ready      = ({length, seed, carrier_freq})-> (next)->
   document.body.style.backgroundColor = location.hash.slice(1)
   recbuf = new RecordBuffer(actx.sampleRate, processor.bufferSize, processor.channelCount)
   isRecording    = false
   isBroadcasting = false
   pulseStartTime = {}
   pulseStopTime  = {}
-  DSSS_SPECS = data[socket.id].map ({length, seedA, seedB, shift, carrier_freq}, i)->
-    ss_code = Signal.mseqGen(length, seedA) # {1,-1}
-    #ss_code = Signal.goldSeqGen(length, seedA, seedB, shift)
-    encoded_data = Signal.encode_chipcode([1], ss_code)
-    matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0)
-    modulated_pulse = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0, encoded_data.length * (1/carrier_freq) * actx.sampleRate)
-    abuf = osc.createAudioBufferFromArrayBuffer(modulated_pulse, actx.sampleRate)
-    {abuf, delay: 0.1*i, matched: matched.buffer, ss_code, carrier_freq, modulated_pulse_length: modulated_pulse.length}
+  ss_code = Signal.mseqGen(length, seed) # {1,-1}
+  encoded_data = Signal.encode_chipcode([1], ss_code) # {1,0,-1}
+  matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
+  modulated_pulse = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0, encoded_data.length * (1/carrier_freq) * actx.sampleRate) # modulated
+  abuf = osc.createAudioBufferFromArrayBuffer(modulated_pulse, actx.sampleRate)
+  DSSS_SPEC = {abuf, matched: matched.buffer, ss_code, carrier_freq, modulated_pulse_length: modulated_pulse.length}
   next()
 startRec   = (next)-> isRecording = true; next()
 startPulse = (id)-> (next)-> pulseStartTime[id] = actx.currentTime; next()
 beepPulse  = (next)->
-  Promise.all DSSS_SPECS.map ({abuf, delay, modulated_pulse_length})->
-    anode = osc.createAudioNodeFromAudioBuffer(abuf)
-    anode.connect(actx.destination)
-    anode.start(actx.currentTime + delay)
-    new Promise (resolve, reject)->
-      setTimeout((recur = ->
-        if recbuf.chsBuffers[0].length > Math.ceil(modulated_pulse_length / processor.bufferSize)
-        then resolve()
-        else setTimeout(recur, 100)
-      ), (modulated_pulse_length/actx.sampleRate + delay) * 1000)
-  .catch (err)-> window.onerror(err)
-  .then -> next()
+  {abuf, modulated_pulse_length} = DSSS_SPEC
+  anode = osc.createAudioNodeFromAudioBuffer(abuf)
+  anode.connect(actx.destination)
+  anode.start(actx.currentTime)
+  setTimeout((recur = ->
+    if recbuf.chsBuffers[0].length > Math.ceil(modulated_pulse_length / processor.bufferSize)
+    then next()
+    else setTimeout(recur, 100)
+  ), (modulated_pulse_length/actx.sampleRate) * 1000)
 stopPulse  = (id)-> (next)-> pulseStopTime[id] = actx.currentTime; next()
 stopRec    = (next) -> isRecording = false; next()
 sendRec    = (next)->
@@ -112,97 +107,86 @@ sendRec    = (next)->
     bufferSize: processor.bufferSize
     channelCount: processor.channelCount
     recF32arr: f32arr.buffer
-    DSSS_SPECS: DSSS_SPECS
+    DSSS_SPEC: DSSS_SPEC
   recbuf.clear()
   next(o)
 collect = (datas)-> (next)->
   if location.hash.slice(1) isnt "red" then return next()
   console.info("calc")
   console.time("calc")
-  results = datas.map ({id, alias, startStops, recF32arr, DSSS_SPECS, sampleRate})->
+  results = datas.map ({id, alias, startStops, recF32arr, DSSS_SPEC, sampleRate})->
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
       section = new Float32Array(recF32arr).subarray(startPtr, stopPtr)
-      __results = DSSS_SPECS.map ({matched, carrier_freq}, i)->
-        correl = Signal.fft_smart_overwrap_correlation(section, new Float32Array(matched))
-        [max_score, max_offset] = Signal.Statictics.findMax(correl)
-        stdev = Signal.Statictics.stdev(correl)
-        stdscore = Signal.Statictics.stdscore(correl, max_score)
-        pulseTime = (startPtr + max_offset) / sampleRate
-        return {correl, max_score, max_offset, stdev, stdscore, pulseTime}
-      return {id: _id, section, results: __results}
-    return {id, alias, results: _results}
+      {matched, carrier_freq} = DSSS_SPEC
+      correl = Signal.fft_smart_overwrap_correlation(section, new Float32Array(matched))
+      [max_score, max_offset] = Signal.Statictics.findMax(correl)
+      stdev = Signal.Statictics.stdev(correl)
+      stdscore = Signal.Statictics.stdscore(correl, max_score)
+      pulseTime = (startPtr + max_offset) / sampleRate
+      {id: _id, section, correl, max_score, max_offset, stdev, stdscore, pulseTime}
+    {id, alias, results: _results}
   console.timeEnd("calc")
-  aliases = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
   console.info("afterCalc")
   console.time("afterCalc")
+  aliases = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
   pulseTimes = {}
   relDelayTimes = {}
   delayTimes = {}
   distances = {}
   distancesAliased = {}
   results.forEach ({id, alias, results})->
-    results.forEach ({id: _id, section, results})->
+    results.forEach ({id: _id, section, results, correl, max_score, max_offset, stdev, stdscore, pulseTime})->
       pulseTimes[id] = pulseTimes[id] || {}
-      pulseTimes[id][_id] = []
-      results.forEach ({correl, max_score, max_offset, stdev, stdscore, pulseTime}, i)->
-        pulseTimes[id][_id][i] = pulseTime
+      pulseTimes[id][_id] = pulseTime
   Object.keys(pulseTimes).forEach (id1)->
     Object.keys(pulseTimes).forEach (id2)->
       relDelayTimes[id1] = relDelayTimes[id1] || {}
-      relDelayTimes[id1][id2] = []
-      pulseTimes[id1][id2].forEach (_, i)->
-        relDelayTimes[id1][id2][i] = pulseTimes[id1][id2][i] - pulseTimes[id1][id1][i]
+      relDelayTimes[id1][id2] = pulseTimes[id1][id2] - pulseTimes[id1][id1]
   Object.keys(pulseTimes).forEach (id1)->
     Object.keys(pulseTimes).forEach (id2)->
       delayTimes[id1] = delayTimes[id1] || {}
-      delayTimes[id1][id2] = []
+      delayTimes[id1][id2] = Math.abs(Math.abs(relDelayTimes[id1][id2]) - Math.abs(relDelayTimes[id2][id1]))
       distances[id1] = distances[id1] || {}
-      distances[id1][id2] = []
+      distances[id1][id2] = delayTimes[id1][id2]/2*340
       distancesAliased[aliases[id1]] = distancesAliased[aliases[id1]] || {}
-      distancesAliased[aliases[id1]][aliases[id2]] = []
-      pulseTimes[id1][id2].forEach (_, i)->
-        delayTimes[id1][id2][i] = Math.abs(Math.abs(relDelayTimes[id1][id2][i]) - Math.abs(relDelayTimes[id2][id1][i]))
-        distances[id1][id2][i] = delayTimes[id1][id2][i]/2*340
-        distancesAliased[aliases[id1]][aliases[id2]][i] = distances[id1][id2][i]
+      distancesAliased[aliases[id1]][aliases[id2]] = distances[id1][id2]
   console.timeEnd("afterCalc")
   console.info("distancesAliased", distancesAliased)
   setTimeout ->
     results.forEach ({id, alias, results})->
-      results.forEach ({id: _id, section, results})->
+      results.forEach ({id: _id, section, correl, max_offset})->
         # title
         document.body.appendChild document.createTextNode("#{aliases[id]}<->#{aliases[_id]}")
         # section
         render = new Signal.Render(VIEW_SIZE, 127)
         render.drawSignal(section, true, true)
         document.body.appendChild(render.element)
-        results.forEach ({correl, max_offset}, i)->
-          document.body.appendChild document.createTextNode("#{aliases[id]}<-#{i}->#{aliases[_id]}")
-          # correl
-          render = new Signal.Render(VIEW_SIZE, 127)
-          render.drawSignal(correl, true, true)
-          document.body.appendChild(render.element)
-          # offset
-          RANGE = 512
-          render = new Signal.Render(VIEW_SIZE, 12)
-          offset_arr = new Uint8Array(correl.length)
-          offset_arr[max_offset-RANGE] = 255
-          offset_arr[max_offset] = 255
-          offset_arr[max_offset+RANGE] = 255
-          render.ctx.strokeStyle = "red"
-          render.drawSignal(offset_arr, true, true)
-          document.body.appendChild(render.element)
-          # zoom
-          zoomarr = correl.subarray(max_offset-RANGE, max_offset+RANGE)
-          render = new Signal.Render(VIEW_SIZE, 127)
-          render.drawSignal(zoomarr, true, true)
-          document.body.appendChild(render.element)
-          # offset
-          render = new Signal.Render(VIEW_SIZE, 12)
-          offset_arr = new Uint8Array(zoomarr.length)
-          offset_arr[RANGE] = 255
-          render.ctx.strokeStyle = "red"
-          render.drawSignal(offset_arr, true, true)
-          document.body.appendChild(render.element)
+        # correl
+        render = new Signal.Render(VIEW_SIZE, 127)
+        render.drawSignal(correl, true, true)
+        document.body.appendChild(render.element)
+        # offset
+        RANGE = 512
+        render = new Signal.Render(VIEW_SIZE, 12)
+        offset_arr = new Uint8Array(correl.length)
+        offset_arr[max_offset-RANGE] = 255
+        offset_arr[max_offset] = 255
+        offset_arr[max_offset+RANGE] = 255
+        render.ctx.strokeStyle = "red"
+        render.drawSignal(offset_arr, true, true)
+        document.body.appendChild(render.element)
+        # zoom
+        zoomarr = correl.subarray(max_offset-RANGE, max_offset+RANGE)
+        render = new Signal.Render(VIEW_SIZE, 127)
+        render.drawSignal(zoomarr, true, true)
+        document.body.appendChild(render.element)
+        # offset
+        render = new Signal.Render(VIEW_SIZE, 12)
+        offset_arr = new Uint8Array(zoomarr.length)
+        offset_arr[RANGE] = 255
+        render.ctx.strokeStyle = "red"
+        render.drawSignal(offset_arr, true, true)
+        document.body.appendChild(render.element)
     document.body.style.backgroundColor = "lime"
   next()
 _prepareRec = (next)->
