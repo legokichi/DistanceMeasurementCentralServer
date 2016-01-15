@@ -35,6 +35,7 @@ window.onerror = (err)->
 
 # let
 VIEW_SIZE = Math.pow(2, 10)
+RANGE = Math.pow(2, 9)
 actx = new AudioContext()
 osc = new OSC(actx)
 analyser = actx.createAnalyser()
@@ -117,22 +118,20 @@ sendRec    = (next)->
   next(o)
 collect = (datas)-> (next)->
   if location.hash.slice(1) isnt "red" then return next()
-  console.info("calc")
-  console.time("calc")
+  console.info("calcCorrel")
+  console.time("calcCorrel")
   results = datas.map ({id, alias, startStops, recF32arr, DSSS_SPEC, sampleRate})->
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
       section = new Float32Array(recF32arr).subarray(startPtr, stopPtr)
       {matched, carrier_freq} = DSSS_SPEC
       correl = Signal.fft_smart_overwrap_correlation(section, new Float32Array(matched))
       [max_score, max_offset] = Signal.Statictics.findMax(correl)
-      stdev = Signal.Statictics.stdev(correl)
-      stdscore = Signal.Statictics.stdscore(correl, max_score)
       pulseTime = (startPtr + max_offset) / sampleRate
-      {id: _id, section, correl, max_score, max_offset, stdev, stdscore, pulseTime}
+      {id: _id, section, correl, max_score, max_offset, pulseTime}
     {id, alias, results: _results}
-  console.timeEnd("calc")
-  console.info("afterCalc")
-  console.time("afterCalc")
+  console.timeEnd("calcCorrel")
+  console.info("calcRelDist")
+  console.time("calcRelDist")
   aliases = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
   sampleRates = datas.reduce(((o, {id, sampleRate})-> o[id] = sampleRate; o), {})
   pulseTimes = {}
@@ -156,15 +155,27 @@ collect = (datas)-> (next)->
       distances[id1][id2] = delayTimes[id1][id2]/2*340
       distancesAliased[aliases[id1]] = distancesAliased[aliases[id1]] || {}
       distancesAliased[aliases[id1]][aliases[id2]] = distances[id1][id2]
-  console.timeEnd("afterCalc")
+  console.timeEnd("calcRelDist")
   console.info("distancesAliased", distancesAliased)
+  console.info("calcRelPos")
+  console.time("calcRelPos")
+  ds = Object.keys(delayTimes).map (id1)->
+    Object.keys(delayTimes).map (id2)->
+      distances[id1][id2]
+  pseudoPts = results.map((id1, i)-> new Point(Math.random()*10, Math.random()*10))
+  sdm = new SDM(pseudoPts, ds)
+  K = 0
+  while K++ < 200
+    sdm.step()
+  console.timeEnd("calcRelPos")
+  console.info("calcRelPos", sdm.det(), sdm.points)
   setTimeout ->
     frame_ = _craetePictureFrame ""
     document.body.appendChild frame_.element
     results.forEach ({id, alias, results, sampleRate})->
       frame = _craetePictureFrame "#{alias}@#{id}"
       frame_.add frame.element
-      results.forEach ({id: _id, section, correl, max_offset})->
+      results.forEach ({id: _id, section, correl, max_offset, peakIndexes})->
         # title
         _frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"
         frame.add _frame.element
@@ -175,7 +186,6 @@ collect = (datas)-> (next)->
         render.drawSignal(section, true, true)
         _frame.add render.element
         # offset
-        RANGE = Math.pow(2, 9)
         render = new Signal.Render(VIEW_SIZE, 12)
         offset_arr = new Uint8Array(correl.length)
         offset_arr[max_offset-RANGE] = 255
@@ -200,20 +210,11 @@ collect = (datas)-> (next)->
         render.ctx.strokeStyle = "red"
         render.drawSignal(offset_arr, true, true)
         _frame.add render.element
-        # lowpass
-        correl = _lowpass(correl, sampleRates[id], 800, 1/Math.sqrt(2, 2))
-        zoomarr = correl.subarray(max_offset-RANGE, max_offset+RANGE)
-        [_, _max_offset] = Signal.Statictics.findMax(zoomarr)
-        render = new Signal.Render(VIEW_SIZE, 127)
-        render.drawSignal(zoomarr, true, true)
-        _frame.add render.element
-        # offset
-        render = new Signal.Render(VIEW_SIZE, 12)
-        offset_arr = new Uint8Array(zoomarr.length)
-        offset_arr[_max_offset] = 255
-        render.ctx.strokeStyle = "red"
-        render.drawSignal(offset_arr, true, true)
-        _frame.add render.element
+    # relpos
+    render = new Signal.Render(Math.pow(2, 8), Math.pow(2, 8))
+    sdm.points.forEach (pt)->
+      render.cross(render.cnv.width/2+pt.x*10+10, render.cnv.height/2+pt.y*10+10, 16)
+    frame_.add render.element
     document.body.style.backgroundColor = "lime"
   next()
 _prepareRec = (next)->
@@ -260,11 +261,6 @@ _craetePictureFrame = (description) ->
         fieldset.appendChild p
       else fieldset.appendChild element
   }
-_lowpass = (input, sampleRate, freq, q)->
-  # function IIRFilter2(type, cutoff, resonance, sampleRate)
-  filter = new IIRFilter2(DSP.LOWPASS, freq, q, sampleRate)
-  filter.process(input)
-  input
 
 # main proc
 window.addEventListener "DOMContentLoaded", -> _prepareRec -> _prepareSpect -> main()
