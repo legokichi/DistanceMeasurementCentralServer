@@ -80,6 +80,8 @@ main = ->
     next(o)
 
 # where
+
+
 _preparePulse = (next)->
   osc.createBarkerCodedChirp(13, 8).then (_pulse)->
     pulse = _pulse
@@ -91,9 +93,6 @@ _prepareRec = (next)->
     source = actx.createMediaStreamSource(stream)
     source.connect(processor)
     processor.connect(actx.destination)
-    processor.addEventListener "audioprocess", (ev)->
-      if(isRecording)
-        recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], actx.currentTime)
     next()
   navigator.getUserMedia({video: false, audio: true}, right, left)
 _beep = (next)->

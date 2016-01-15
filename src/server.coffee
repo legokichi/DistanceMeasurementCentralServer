@@ -135,7 +135,7 @@ def read_Float32Array_from_file(file_name):
             if not data: break
             f32 = struct.unpack('f', data)
             f32arr.append(f32[0])
-    f32arr
+        return f32arr
 """
 generateViewerPythonCode = ({fileName, sampleRate})->
   """

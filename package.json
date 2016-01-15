@@ -2,9 +2,9 @@
   "name": "DistanceMeasurementCentralServer",
   "version": "1.0.0",
   "description": "",
-  "main": "lib/index.js",
+  "main": "demo/server.js",
   "scripts": {
-    "start": "coffee -w -c -b -o lib src/index.coffee & coffee -w -c -b -o demo src/client.coffee & supervisor lib/index.js",
+    "start": "coffee -w -c -b -o demo src/*.coffee & supervisor demo/server.js",
     "stop": "killall -- node /Users",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

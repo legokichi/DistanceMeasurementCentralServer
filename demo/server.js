@@ -198,7 +198,7 @@ calc = function(datas) {
   return console.log(datas);
 };
 
-PYTHON_IMPORT = "# coding: utf-8\nimport matplotlib.pyplot as plt\nimport matplotlib.mlab as mlab\nimport numpy as np\nimport scipy as sp\nimport sys\nimport struct\ndef plot(fnmtx):\n    w = len(fnmtx[0])\n    h = len(fnmtx)\n    k = 1\n    for fnarr in fnmtx:\n        for fn in fnarr:\n            plt.subplot(w,h,k)\n            fn(k)\n            k += 1\ndef read_Float32Array_from_file(file_name):\n    f32arr = []\n    with open(file_name, \"rb\") as f:\n        while True:\n            data = f.read(4)\n            if not data: break\n            f32 = struct.unpack('f', data)\n            f32arr.append(f32[0])\n    f32arr";
+PYTHON_IMPORT = "# coding: utf-8\nimport matplotlib.pyplot as plt\nimport matplotlib.mlab as mlab\nimport numpy as np\nimport scipy as sp\nimport sys\nimport struct\ndef plot(fnmtx):\n    w = len(fnmtx[0])\n    h = len(fnmtx)\n    k = 1\n    for fnarr in fnmtx:\n        for fn in fnarr:\n            plt.subplot(w,h,k)\n            fn(k)\n            k += 1\ndef read_Float32Array_from_file(file_name):\n    f32arr = []\n    with open(file_name, \"rb\") as f:\n        while True:\n            data = f.read(4)\n            if not data: break\n            f32 = struct.unpack('f', data)\n            f32arr.append(f32[0])\n        return f32arr";
 
 generateViewerPythonCode = function(arg) {
   var fileName, sampleRate;
@@ -209,5 +209,5 @@ generateViewerPythonCode = function(arg) {
 generateDetectionPythonCode = function(arg) {
   var pulseFileName, recFileName, sampleRate;
   recFileName = arg.recFileName, pulseFileName = arg.pulseFileName, sampleRate = arg.sampleRate;
-  return PYTHON_IMPORT + "\n\nrec_file_name = '" + recFileName + "'\npulse_file_name = '" + pulseFileName + "'\nsample_rate = " + sampleRate + "\n\nrec_f32arr = read_Float32Array_from_file(rec_file_name)\npulse_f32arr = read_Float32Array_from_file(pulse_file_name)\n\ndef plotAutoCorrel(id):\n  a = np.correlate(rec_f32arr, pulse_f32arr, \"full\")\n  plt.plot(xrange(len(a)), a)\n\nplot([\n    [plotAutoCorrel]\n])\nplt.show()";
+  return PYTHON_IMPORT + "\n\nrec_file_name = '" + recFileName + "'\npulse_file_name = '" + pulseFileName + "'\nsample_rate = " + sampleRate + "\n\nrec_f32arr = read_Float32Array_from_file(rec_file_name)\npulse_f32arr = read_Float32Array_from_file(pulse_file_name)\n\ndef plotAutoCorrel(id):\n  a = np.correlate(pulse_f32arr, rec_f32arr, \"full\")\n  plt.plot(xrange(len(a)), a)\n\nplot([\n    [plotAutoCorrel]\n])\nplt.show()";
 };

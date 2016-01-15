@@ -153,11 +153,6 @@ _prepareRec = function(next) {
     source = actx.createMediaStreamSource(stream);
     source.connect(processor);
     processor.connect(actx.destination);
-    processor.addEventListener("audioprocess", function(ev) {
-      if (isRecording) {
-        return recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], actx.currentTime);
-      }
-    });
     return next();
   };
   return navigator.getUserMedia({
