@@ -103,9 +103,11 @@ isLooping = false;
 
 stop = function() {
   isLooping = false;
+  return console.log("stoped");
 };
 
 start = function() {
+  console.log("started");
   if (!isLooping) {
     experimentID = Date.now();
     isLooping = true;

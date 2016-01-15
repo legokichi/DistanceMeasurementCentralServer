@@ -301,7 +301,7 @@ collect = function(datas) {
     console.info("distancesAliased", distancesAliased);
     setTimeout(function() {
       var frame_;
-      frame_ = _craetePictureFrame("==================");
+      frame_ = _craetePictureFrame("");
       document.body.appendChild(frame_.element);
       results.forEach(function(arg) {
         var alias, frame, id, results, sampleRate;
@@ -309,7 +309,7 @@ collect = function(datas) {
         frame = _craetePictureFrame(alias + "@" + id);
         frame_.add(frame.element);
         return results.forEach(function(arg1) {
-          var RANGE, _frame, _id, correl, max_offset, offset_arr, render, section, zoomarr;
+          var RANGE, _, _frame, _id, _max_offset, correl, max_offset, offset_arr, ref, render, section, zoomarr;
           _id = arg1.id, section = arg1.section, correl = arg1.correl, max_offset = arg1.max_offset;
           _frame = _craetePictureFrame(aliases[id] + "<->" + aliases[_id]);
           frame.add(_frame.element);
@@ -317,7 +317,7 @@ collect = function(datas) {
           render = new Signal.Render(VIEW_SIZE, 127);
           render.drawSignal(section, true, true);
           _frame.add(render.element);
-          RANGE = Math.pow(2, 10);
+          RANGE = Math.pow(2, 9);
           render = new Signal.Render(VIEW_SIZE, 12);
           offset_arr = new Uint8Array(correl.length);
           offset_arr[max_offset - RANGE] = 255;
@@ -339,9 +339,17 @@ collect = function(datas) {
           render.ctx.strokeStyle = "red";
           render.drawSignal(offset_arr, true, true);
           _frame.add(render.element);
-          zoomarr = _lowpass(zoomarr, sampleRates[id], 100, 1 / Math.sqrt(2, 2));
+          correl = _lowpass(correl, sampleRates[id], 800, 1 / Math.sqrt(2, 2));
+          zoomarr = correl.subarray(max_offset - RANGE, max_offset + RANGE);
+          ref = Signal.Statictics.findMax(zoomarr), _ = ref[0], _max_offset = ref[1];
           render = new Signal.Render(VIEW_SIZE, 127);
           render.drawSignal(zoomarr, true, true);
+          _frame.add(render.element);
+          render = new Signal.Render(VIEW_SIZE, 12);
+          offset_arr = new Uint8Array(zoomarr.length);
+          offset_arr[_max_offset] = 255;
+          render.ctx.strokeStyle = "red";
+          render.drawSignal(offset_arr, true, true);
           return _frame.add(render.element);
         });
       });
@@ -425,38 +433,10 @@ _craetePictureFrame = function(description) {
 };
 
 _lowpass = function(input, sampleRate, freq, q) {
-
-  /*
-  // float input[]  …入力信号の格納されたバッファ。
-  // flaot output[] …フィルタ処理した値を書き出す出力信号のバッファ。
-  // int   size     …入力信号・出力信号のバッファのサイズ。
-  // float sampleRate … サンプリング周波数。
-  // float freq … カットオフ周波数。
-  // float q    … フィルタのQ値。
-   */
-  var a0, a1, a2, alpha, b0, b1, b2, i, in1, in2, j, omega, out1, out2, output, ref, size;
-  size = input.length;
-  output = new Float32Array(size);
-  omega = 2.0 * Math.PI * freq / sampleRate;
-  alpha = Math.sin(omega) / (2.0 * q);
-  a0 = 1.0 + alpha;
-  a1 = -2.0 * Math.cos(omega);
-  a2 = 1.0 - alpha;
-  b0 = (1.0 - Math.cos(omega)) / 2.0;
-  b1 = 1.0 - Math.cos(omega);
-  b2 = (1.0 - Math.cos(omega)) / 2.0;
-  in1 = 0.0;
-  in2 = 0.0;
-  out1 = 0.0;
-  out2 = 0.0;
-  for (i = j = 0, ref = size; 0 <= ref ? j <= ref : j >= ref; i = 0 <= ref ? ++j : --j) {
-    output[i] = b0 / a0 * input[i] + b1 / a0 * in1 + b2 / a0 * in2 - a1 / a0 * out1 - a2 / a0 * out2;
-    in2 = in1;
-    in1 = input[i];
-    out2 = out1;
-    out1 = output[i];
-  }
-  return output;
+  var filter;
+  filter = new IIRFilter2(DSP.LOWPASS, freq, q, sampleRate);
+  filter.process(input);
+  return input;
 };
 
 window.addEventListener("DOMContentLoaded", function() {

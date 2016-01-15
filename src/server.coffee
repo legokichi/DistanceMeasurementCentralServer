@@ -70,8 +70,11 @@ server.listen(8000)
 # {length: 11 , seedA: n("01000000001"), seedB: n("00011001111"), shift: i, carrier_freq: 10000}
 # {length: 11 , seedA: n("01001001001"), seedB: n("10101010101"), shift: i, carrier_freq: 6000}
 isLooping = false
-stop = -> isLooping = false; return
+stop = ->
+  isLooping = false
+  console.log "stoped"
 start = ->
+  console.log "started"
   if !isLooping
     experimentID = Date.now()
     isLooping = true
