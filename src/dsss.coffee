@@ -35,7 +35,6 @@ window.onerror = (err)->
 
 # let
 VIEW_SIZE = Math.pow(2, 10)
-RANGE = Math.pow(2, 10)
 actx = new AudioContext()
 osc = new OSC(actx)
 analyser = actx.createAnalyser()
@@ -48,7 +47,6 @@ isRecording    = false
 isBroadcasting = false
 pulseStartTime = {}
 pulseStopTime  = {}
-correlCache = {}
 DSSS_SPEC = null
 
 
@@ -81,24 +79,24 @@ ready      = ({length, seed, carrier_freq, isChirp, powL})-> (next)->
       next()
   else
     ss_code = Signal.mseqGen(length, seed) # {1,-1}
-    encoded_data = Signal.encode_chipcode_separated_zero([1, 1], ss_code) # {1,0,-1}
+    encoded_data = Signal.encode_chipcode_separated_zero([1, 0, 1], ss_code) # {1,0,-1}
     matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
     ss_sig = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0) # modulated
     abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
     DSSS_SPEC = {abuf, matched: matched.buffer}
+    console.log matched.length, ss_sig.length, abuf
+    ->
+      corr = Signal.fft_smart_overwrap_correlation(ss_sig, matched)
+      coms = [
+        [matched, true, true]
+        [ss_sig, true, true]
+        [corr, true, true]
+      ].forEach (com, i)->
+        render = new Signal.Render(com[0].length/100, 64)
+        Signal.Render::drawSignal.apply(render, com)
+        document.body.appendChild render.element
+        document.body.appendChild document.createElement "br"
     next()
-    return
-
-    corr = Signal.fft_smart_overwrap_correlation(ss_sig, matched)
-    coms = [
-      [matched, true, true]
-      [ss_sig, true, true]
-      [corr, true, true]
-    ].forEach (com, i)->
-      render = new Signal.Render(VIEW_SIZE, 64)
-      Signal.Render::drawSignal.apply(render, com)
-      document.body.appendChild render.element
-      document.body.appendChild document.createElement "br"
 
 
 startRec   = (next)-> isRecording = true; next()
@@ -141,27 +139,87 @@ collect = (datas)-> (next)->
   if location.hash.slice(1) isnt "red" then return next()
   console.info("calcCorrel")
   console.time("calcCorrel")
+  frame_ = _craetePictureFrame ""
+  document.body.appendChild frame_.element
+  aliases = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
   results = datas.map ({id, alias, startStops, recF32arr, DSSS_SPEC, sampleRate})->
-    correlCache[id] = correlCache[id] || {}
+    frame = _craetePictureFrame "#{alias}@#{id}"
+    frame_.add frame.element
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
       section = new Float32Array(recF32arr).subarray(startPtr, stopPtr)
-      {matched} = DSSS_SPEC
-      correl = Signal.fft_smart_overwrap_correlation(section, new Float32Array(matched))
-      correlCache[id][_id] = correlCache[id][_id] || [null, null]
-      correlCache[id][_id].shift()
-      correlCache[id][_id].push correl
-      [prev, curr] = correlCache[id][_id]
-      if prev? and curr?
-      then raked = Signal.fft_smart_overwrap_correlation(prev, curr)
-      else raked = null
-      [max_score, max_offset] = Signal.Statictics.findMax(correl)
+      matched = new Float32Array(DSSS_SPEC.matched)
+      correl = Signal.fft_smart_overwrap_correlation(section, matched)
+      # 3つのパルスに切りわける [1,0,1,0,1,0,0,0] -> [1], [1], [1]
+      T = matched.length*2
+      A = correl.subarray(T*0, T*0 + T)
+      B = correl.subarray(T*1, T*1 + T)
+      C = correl.subarray(T*2, T*2 + T)
+      range = Math.pow(2, 9)
+      sum = B.map (_, i)-> A[i]+B[i]+C[i]
+      [_, idxB] = Signal.Statictics.findMax(sum)
+      [_A, _B, _C] = [A, B, C].map (X)-> # ABCを加算したもののピークを基準として +-range の区間切り出し
+        A.subarray(idxB-range, idxB+range).map (v)-> v*v*v # 3乗にして符号を保つ
+      U = range*2
+      maxesBA = new Float32Array(U)
+      maxesBC = new Float32Array(U)
+      # パルスを後ろからずらしてエネルギーが最大になる地点を探索。計算量悪し
+      for i in [0..U*0.8|0]
+        __A = new Float32Array(U)
+        __A.set(_A.subarray(U-i, U), 0)
+        corrBA = Signal.fft_smart_overwrap_correlation(_B, __A)
+        [val, idx] = Signal.Statictics.findMax(corrBA)
+        maxesBA[i] = if idx > 0 then val else 0
+        __C = new Float32Array(U)
+        __C.set(_C.subarray(U-i, U), 0)
+        corrBC = Signal.fft_smart_overwrap_correlation(_B, __C)
+        [val, idx] = Signal.Statictics.findMax(corrBC)
+        maxesBC[i] = if idx > 0 then val else 0
+      [_, idxBA] = Signal.Statictics.findMax(maxesBA)
+      [_, idxBC] = Signal.Statictics.findMax(maxesBC)
+      # AとB、BとCから見つけたピークを平均
+      max_offset = idxB-range+(idxBC+idxBA)/2
       pulseTime = (startPtr + max_offset) / sampleRate
-      {id: _id, section, correl, max_score, max_offset, pulseTime, raked}
+      # title
+      _frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"
+      frame.add _frame.element
+      offset_arr = new Uint8Array(correl.length)
+      offset_arr[max_offset] = 255
+      offset_arr[T*0] = 255
+      offset_arr[T*1] = 255
+      offset_arr[T*2] = 255
+      offset_arr2 = new Uint8Array(T)
+      offset_arr2[idxB] = 255
+      offset_arr2[idxB-range] = 255
+      offset_arr2[idxB+range] = 255
+      offset_arr3 = new Uint8Array(maxesBA.length)
+      offset_arr3[idxBA] = 255
+      offset_arr3[idxBC] = 255
+      coms = [
+        [section, true, true]
+        [correl, true, true]
+        [offset_arr, true, true]
+        [A, true, true]
+        [B, true, true]
+        [C, true, true]
+        [sum, true, true]
+        [offset_arr2, true, true]
+        [_A, true, true]
+        [_B, true, true]
+        [_C, true, true]
+        [offset_arr3, true, true]
+        [maxesBA, true, true]
+        [maxesBC, true, true]
+      ].forEach (com, i)->
+        render = new Signal.Render(VIEW_SIZE, 64)
+        Signal.Render::drawSignal.apply(render, com)
+        _frame.add render.element
+        _frame.add document.createElement "br"
+      _frame.add document.createTextNode [idxBC,idxBA].join(",")
+      {id: _id, max_offset, pulseTime}
     {id, alias, results: _results}
   console.timeEnd("calcCorrel")
   console.info("calcRelDist")
   console.time("calcRelDist")
-  aliases = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
   sampleRates = datas.reduce(((o, {id, sampleRate})-> o[id] = sampleRate; o), {})
   pulseTimes = {}
   relDelayTimes = {}
@@ -198,59 +256,13 @@ collect = (datas)-> (next)->
     sdm.step()
   console.timeEnd("calcRelPos")
   console.info("calcRelPos", sdm.det(), sdm.points)
-  setTimeout ->
-    frame_ = _craetePictureFrame ""
-    document.body.appendChild frame_.element
-    results.forEach ({id, alias, results, sampleRate})->
-      frame = _craetePictureFrame "#{alias}@#{id}"
-      frame_.add frame.element
-      results.forEach ({id: _id, section, correl, max_offset, raked})->
-        # title
-        _frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"
-        frame.add _frame.element
-        # result
-        _frame.add "#{distances[id][_id]}m"
-        # section
-        render = new Signal.Render(VIEW_SIZE, 127)
-        render.drawSignal(section, true, true)
-        _frame.add render.element
-        # offset
-        render = new Signal.Render(VIEW_SIZE, 12)
-        offset_arr = new Uint8Array(correl.length)
-        offset_arr[max_offset-RANGE] = 255
-        offset_arr[max_offset] = 255
-        offset_arr[max_offset+RANGE] = 255
-        render.ctx.strokeStyle = "red"
-        render.drawSignal(offset_arr, true, true)
-        _frame.add render.element
-        # correl
-        render = new Signal.Render(VIEW_SIZE, 127)
-        render.drawSignal(correl, true, true)
-        _frame.add render.element
-        # zoom
-        zoomarr = correl.subarray(max_offset-RANGE, max_offset+RANGE)
-        render = new Signal.Render(VIEW_SIZE, 127)
-        render.drawSignal(zoomarr, true, true)
-        _frame.add render.element
-        # offset
-        render = new Signal.Render(VIEW_SIZE, 12)
-        offset_arr = new Uint8Array(zoomarr.length)
-        offset_arr[RANGE] = 255
-        render.ctx.strokeStyle = "red"
-        render.drawSignal(offset_arr, true, true)
-        _frame.add render.element
-        # rake
-        if raked?
-          render = new Signal.Render(VIEW_SIZE, 127)
-          render.drawSignal(raked, true, true)
-          _frame.add render.element
-    # relpos
-    render = new Signal.Render(Math.pow(2, 8), Math.pow(2, 8))
-    basePt = sdm.points[0]
-    sdm.points.forEach (pt)->
-      render.cross(render.cnv.width/2+(pt.x-basePt.x)*10, render.cnv.height/2+(pt.y-basePt.y)*10, 16)
-    frame_.add render.element
-    document.body.style.backgroundColor = "lime"
+  # relpos
+  render = new Signal.Render(Math.pow(2, 8), Math.pow(2, 8))
+  basePt = sdm.points[0]
+  sdm.points.forEach (pt)->
+    render.cross(render.cnv.width/2+(pt.x-basePt.x)*10, render.cnv.height/2+(pt.y-basePt.y)*10, 16)
+  document.body.appendChild render.element
+  document.body.style.backgroundColor = "lime"
   next()
 _prepareRec = (next)->
   left  = (err)-> throw err
