@@ -59,16 +59,18 @@ io.on 'connection', (socket)->
 
 server.listen(8000)
 
-#MSEQ_KEY = [15, [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1]]
-#MSEQ_KEY = [12, [1,0,0,1,0,1,0,0,0,0,0,1]]
-#Signal.mseqGen(MSEQ_KEY[0], MSEQ_KEY[1]) # {1,-1}
-#Signal.goldSeqGen(12, [1,0,0,1,0,1,0,0,0,0,0,1], [1,0,1,1,0,1,0,1,0,1,1,1], 3)
-#Signal.goldSeqGen(12, [1,0,0,1,0,1,0,0,0,0,0,1], [1,0,1,1,0,1,0,1,0,1,1,1], 7)
-# {length: 12 , seed: [1,1,1,0,0,0,0,1,1,0,0,1], seedB: [0,1,1,1,1,0,1,1,1,1,1,1], shift: i, carrier_freq: 4000}
-# {length: 12 , seedA: [1,0,0,1,0,1,0,0,0,0,0,1], seedB: [1,0,1,1,0,1,0,1,0,1,1,1], shift: i*7, carrier_freq: 4000}
-# {length: 15 , seedA: [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1], seedB: [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1], shift: i, carrier_freq: 4410*3}
-# {length: 11 , seedA: n("01000000001"), seedB: n("00011001111"), shift: i, carrier_freq: 10000}
-# {length: 11 , seedA: n("01001001001"), seedB: n("10101010101"), shift: i, carrier_freq: 6000}
+# length: 15, seed: n("100000000000001")
+# length: 12, seed: n("111000011001")
+# length: 12, seed: n("101101010111")
+# length: 12, seed: n("100101000001")
+# length: 12, seed: n("011110111111")
+# length: 11, seed: n("10101010101")
+# length: 11, seed: n("01001001001")
+# length: 11, seed: n("01000000001")
+# length: 11, seed: n("00011001111")
+# length:  9, seed: n("000100001")
+# length:  6, seed: n("0010001")
+
 isLooping = false
 stop = ->
   isLooping = false
@@ -84,7 +86,7 @@ start = ->
 _loop = ->
   n = (a)-> a.split("").map(Number)
   Promise.resolve()
-  .then -> requestParallel "ready", {length: 11, seed: n("01000000001"), carrier_freq: 4000}
+  .then -> requestParallel "ready", {length:  9, seed: n("000100001"), carrier_freq: 2000, isChirp: false, powL: 10}
   .then -> log "sockets", io.sockets.sockets.map (socket)-> socket.id
   .then -> requestParallel "startRec"
   .then ->

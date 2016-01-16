@@ -35,7 +35,7 @@ window.onerror = (err)->
 
 # let
 VIEW_SIZE = Math.pow(2, 10)
-RANGE = Math.pow(2, 9)
+RANGE = Math.pow(2, 10)
 actx = new AudioContext()
 osc = new OSC(actx)
 analyser = actx.createAnalyser()
@@ -63,7 +63,8 @@ main = ->
   socket.on "collect",    (a)-> collect(a)    -> socket.emit("collect")
 
 # where
-ready      = ({length, seed, carrier_freq})-> (next)->
+ready      = ({length, seed, carrier_freq, isChirp, powL})-> (next)->
+  n = (a)-> a.split("").map(Number)
   document.body.style.backgroundColor = location.hash.slice(1)
   recbuf = new RecordBuffer(actx.sampleRate, processor.bufferSize, processor.channelCount)
   isRecording    = false
@@ -71,27 +72,31 @@ ready      = ({length, seed, carrier_freq})-> (next)->
   pulseStartTime = {}
   pulseStopTime  = {}
   DSSS_SPEC = null
-
-  ss_code = Signal.mseqGen(length, seed) # {1,-1}
-  encoded_data = Signal.encode_chipcode([1], ss_code) # {1,0,-1}
-  matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
-  modulated_pulse = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0, encoded_data.length * (1/carrier_freq) * actx.sampleRate) # modulated
-  abuf = osc.createAudioBufferFromArrayBuffer(matched, actx.sampleRate)
-  #abuf = osc.createAudioBufferFromArrayBuffer(modulated_pulse, actx.sampleRate)
-  DSSS_SPEC = {abuf, matched: matched.buffer, ss_code, carrier_freq, modulated_pulse_length: modulated_pulse.length}
-  next()
+  if isChirp
+    console.log ss_code = Signal.mseqGen(length, seed)
+    osc.resampling(Signal.createCodedChirp(ss_code, powL), 14).then (matched)->
+      abuf = osc.createAudioBufferFromArrayBuffer(matched, actx.sampleRate)
+      DSSS_SPEC = {abuf, matched: matched.buffer}
+      next()
+  else
+    ss_code = Signal.mseqGen(length, seed) # {1,-1}
+    encoded_data = Signal.encode_chipcode([1], ss_code) # {1,0,-1}
+    matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
+    abuf = osc.createAudioBufferFromArrayBuffer(matched, actx.sampleRate)
+    DSSS_SPEC = {abuf, matched: matched.buffer}
+    next()
 startRec   = (next)-> isRecording = true; next()
 startPulse = (id)-> (next)-> pulseStartTime[id] = actx.currentTime; next()
 beepPulse  = (next)->
-  {abuf, modulated_pulse_length} = DSSS_SPEC
+  {abuf} = DSSS_SPEC
   anode = osc.createAudioNodeFromAudioBuffer(abuf)
   anode.connect(actx.destination)
   anode.start(actx.currentTime)
   setTimeout((recur = ->
-    if recbuf.chsBuffers[0].length > Math.ceil(modulated_pulse_length / processor.bufferSize)
+    if recbuf.chsBuffers[0].length > Math.ceil(abuf.length / processor.bufferSize)
     then next()
     else setTimeout(recur, 100)
-  ), (modulated_pulse_length/actx.sampleRate) * 1.1 * 1000)
+  ), abuf.duration * 1.1 * 1000)
 stopPulse  = (id)-> (next)-> pulseStopTime[id] = actx.currentTime; next()
 stopRec    = (next) -> isRecording = false; next()
 sendRec    = (next)->
@@ -123,7 +128,7 @@ collect = (datas)-> (next)->
   results = datas.map ({id, alias, startStops, recF32arr, DSSS_SPEC, sampleRate})->
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
       section = new Float32Array(recF32arr).subarray(startPtr, stopPtr)
-      {matched, carrier_freq} = DSSS_SPEC
+      {matched} = DSSS_SPEC
       correl = Signal.fft_smart_overwrap_correlation(section, new Float32Array(matched))
       [max_score, max_offset] = Signal.Statictics.findMax(correl)
       pulseTime = (startPtr + max_offset) / sampleRate
@@ -212,8 +217,9 @@ collect = (datas)-> (next)->
         _frame.add render.element
     # relpos
     render = new Signal.Render(Math.pow(2, 8), Math.pow(2, 8))
+    basePt = sdm.points[0]
     sdm.points.forEach (pt)->
-      render.cross(render.cnv.width/2+pt.x*10+10, render.cnv.height/2+pt.y*10+10, 16)
+      render.cross(render.cnv.width/2+(pt.x-basePt.x)*10, render.cnv.height/2+(pt.y-basePt.y)*10, 16)
     frame_.add render.element
     document.body.style.backgroundColor = "lime"
   next()
@@ -221,7 +227,7 @@ _prepareRec = (next)->
   left  = (err)-> throw err
   right = (stream)->
     source = actx.createMediaStreamSource(stream)
-    #source.connect(analyser)
+    source.connect(analyser) if location.hash.slice(1) is "red"
     source.connect(processor)
     processor.connect(actx.destination)
     processor.addEventListener "audioprocess", (ev)->
@@ -230,10 +236,11 @@ _prepareRec = (next)->
     next()
   navigator.getUserMedia({video: false, audio: true}, right, left)
 _prepareSpect = (next)->
+  if location.hash.slice(1) isnt "red" then return next()
   spectrums = (new Uint8Array(analyser.frequencyBinCount) for i in [0..analyser.frequencyBinCount])
   rndr = new Signal.Render(spectrums.length, spectrums[0].length)
-  #document.body.appendChild(rndr.element)
-  donot= render = ->
+  document.body.appendChild(rndr.element)
+  do render = ->
     spectrum = spectrums.shift()
     analyser.getByteFrequencyData(spectrum)
     spectrums.push(spectrum)
