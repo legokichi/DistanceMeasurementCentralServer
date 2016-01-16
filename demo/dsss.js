@@ -143,7 +143,7 @@
         });
       } else {
         ss_code = Signal.mseqGen(length, seed);
-        encoded_data = Signal.encode_chipcode_separated_zero([1, 0, 1], ss_code);
+        encoded_data = Signal.encode_chipcode_separated_zero([1, 1, 1], ss_code);
         matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0);
         ss_sig = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0);
         abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate);
@@ -261,7 +261,7 @@
         frame = _craetePictureFrame(alias + "@" + id);
         frame_.add(frame.element);
         _results = startStops.map(function(arg1) {
-          var A, B, C, T, U, _, _A, _B, _C, __A, __C, _frame, _id, coms, corrBA, corrBC, correl, i, idx, idxB, idxBA, idxBC, j, matched, max_offset, maxesBA, maxesBC, offset_arr, offset_arr2, offset_arr3, pulseTime, range, ref, ref1, ref2, ref3, ref4, ref5, ref6, section, startPtr, stopPtr, sum, val;
+          var A, B, C, S, T, U, _, _S, __S, _frame, _id, coms, corrSS, correl, i, idx, idxS, idxSS, j, matched, max_offset, maxesSS, offset_arr, offset_arr2, offset_arr3, pulseTime, range, ref, ref1, ref2, ref3, section, startPtr, stopPtr, val;
           _id = arg1.id, startPtr = arg1.startPtr, stopPtr = arg1.stopPtr;
           section = new Float32Array(recF32arr).subarray(startPtr, stopPtr);
           matched = new Float32Array(DSSS_SPEC.matched);
@@ -270,34 +270,25 @@
           A = correl.subarray(T * 0, T * 0 + T);
           B = correl.subarray(T * 1, T * 1 + T);
           C = correl.subarray(T * 2, T * 2 + T);
-          range = Math.pow(2, 9);
-          sum = B.map(function(_, i) {
+          S = B.map(function(_, i) {
             return A[i] + B[i] + C[i];
           });
-          ref = Signal.Statictics.findMax(sum), _ = ref[0], idxB = ref[1];
-          ref1 = [A, B, C].map(function(X) {
-            return A.subarray(idxB - range, idxB + range).map(function(v) {
-              return v * v * v;
-            });
-          }), _A = ref1[0], _B = ref1[1], _C = ref1[2];
+          range = Math.pow(2, 9);
+          ref = Signal.Statictics.findMax(S), _ = ref[0], idxS = ref[1];
+          _S = S.subarray(idxS - range, idxS + range).map(function(v) {
+            return v * v * v;
+          });
           U = range * 2;
-          maxesBA = new Float32Array(U);
-          maxesBC = new Float32Array(U);
-          for (i = j = 0, ref2 = U * 0.8 | 0; 0 <= ref2 ? j <= ref2 : j >= ref2; i = 0 <= ref2 ? ++j : --j) {
-            __A = new Float32Array(U);
-            __A.set(_A.subarray(U - i, U), 0);
-            corrBA = Signal.fft_smart_overwrap_correlation(_B, __A);
-            ref3 = Signal.Statictics.findMax(corrBA), val = ref3[0], idx = ref3[1];
-            maxesBA[i] = idx > 0 ? val : 0;
-            __C = new Float32Array(U);
-            __C.set(_C.subarray(U - i, U), 0);
-            corrBC = Signal.fft_smart_overwrap_correlation(_B, __C);
-            ref4 = Signal.Statictics.findMax(corrBC), val = ref4[0], idx = ref4[1];
-            maxesBC[i] = idx > 0 ? val : 0;
+          maxesSS = new Float32Array(U);
+          for (i = j = 0, ref1 = U * 0.8 | 0; 0 <= ref1 ? j <= ref1 : j >= ref1; i = 0 <= ref1 ? ++j : --j) {
+            __S = new Float32Array(U);
+            __S.set(_S.subarray(U - i, U), 0);
+            corrSS = Signal.fft_smart_overwrap_correlation(_S, __S);
+            ref2 = Signal.Statictics.findMax(corrSS), val = ref2[0], idx = ref2[1];
+            maxesSS[i] = idx > 0 ? val : 0;
           }
-          ref5 = Signal.Statictics.findMax(maxesBA), _ = ref5[0], idxBA = ref5[1];
-          ref6 = Signal.Statictics.findMax(maxesBC), _ = ref6[0], idxBC = ref6[1];
-          max_offset = idxB - range + (idxBC + idxBA) / 2;
+          ref3 = Signal.Statictics.findMax(maxesSS), _ = ref3[0], idxSS = ref3[1];
+          max_offset = idxS - range + (idxSS + idxSS) / 2;
           pulseTime = (startPtr + max_offset) / sampleRate;
           _frame = _craetePictureFrame(aliases[id] + "<->" + aliases[_id]);
           frame.add(_frame.element);
@@ -307,20 +298,18 @@
           offset_arr[T * 1] = 255;
           offset_arr[T * 2] = 255;
           offset_arr2 = new Uint8Array(T);
-          offset_arr2[idxB] = 255;
-          offset_arr2[idxB - range] = 255;
-          offset_arr2[idxB + range] = 255;
-          offset_arr3 = new Uint8Array(maxesBA.length);
-          offset_arr3[idxBA] = 255;
-          offset_arr3[idxBC] = 255;
-          coms = [[section, true, true], [correl, true, true], [offset_arr, true, true], [A, true, true], [B, true, true], [C, true, true], [sum, true, true], [offset_arr2, true, true], [_A, true, true], [_B, true, true], [_C, true, true], [offset_arr3, true, true], [maxesBA, true, true], [maxesBC, true, true]].forEach(function(com, i) {
+          offset_arr2[idxS] = 255;
+          offset_arr2[idxS - range] = 255;
+          offset_arr2[idxS + range] = 255;
+          offset_arr3 = new Uint8Array(maxesSS.length);
+          offset_arr3[idxSS] = 255;
+          coms = [[section, true, true], [correl, true, true], [offset_arr, true, true], [A, true, true], [B, true, true], [C, true, true], [S, true, true], [offset_arr2, true, true], [_S, true, true], [offset_arr3, true, true], [maxesSS, true, true]].forEach(function(com, i) {
             var render;
             render = new Signal.Render(VIEW_SIZE, 64);
             Signal.Render.prototype.drawSignal.apply(render, com);
             _frame.add(render.element);
             return _frame.add(document.createElement("br"));
           });
-          _frame.add(document.createTextNode([idxBC, idxBA].join(",")));
           return {
             id: _id,
             max_offset: max_offset,

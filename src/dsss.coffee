@@ -79,7 +79,7 @@ ready      = ({length, seed, carrier_freq, isChirp, powL})-> (next)->
       next()
   else
     ss_code = Signal.mseqGen(length, seed) # {1,-1}
-    encoded_data = Signal.encode_chipcode_separated_zero([1, 0, 1], ss_code) # {1,0,-1}
+    encoded_data = Signal.encode_chipcode_separated_zero([1, 1, 1], ss_code) # {1,0,-1}
     matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
     ss_sig = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0) # modulated
     abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
@@ -149,35 +149,26 @@ collect = (datas)-> (next)->
       section = new Float32Array(recF32arr).subarray(startPtr, stopPtr)
       matched = new Float32Array(DSSS_SPEC.matched)
       correl = Signal.fft_smart_overwrap_correlation(section, matched)
-      # 3つのパルスに切りわける [1,0,1,0,1,0,0,0] -> [1], [1], [1]
+      # 相関結果を3つに切りわける [1,0,1,0,1,0,0,0] -> [1,0], [1,0], [1,0]
       T = matched.length*2
       A = correl.subarray(T*0, T*0 + T)
       B = correl.subarray(T*1, T*1 + T)
       C = correl.subarray(T*2, T*2 + T)
+      S = B.map (_, i)-> A[i]+B[i]+C[i] # 加算する
       range = Math.pow(2, 9)
-      sum = B.map (_, i)-> A[i]+B[i]+C[i]
-      [_, idxB] = Signal.Statictics.findMax(sum)
-      [_A, _B, _C] = [A, B, C].map (X)-> # ABCを加算したもののピークを基準として +-range の区間切り出し
-        A.subarray(idxB-range, idxB+range).map (v)-> v*v*v # 3乗にして符号を保つ
+      [_, idxS] = Signal.Statictics.findMax(S) # ABCを加算したもののピークを基準として +-range の区間切り出し
+      _S = S.subarray(idxS-range, idxS+range).map (v)-> v*v*v # 3乗にして符号を保つ
       U = range*2
-      maxesBA = new Float32Array(U)
-      maxesBC = new Float32Array(U)
+      maxesSS = new Float32Array(U)
       # パルスを後ろからずらしてエネルギーが最大になる地点を探索。計算量悪し
       for i in [0..U*0.8|0]
-        __A = new Float32Array(U)
-        __A.set(_A.subarray(U-i, U), 0)
-        corrBA = Signal.fft_smart_overwrap_correlation(_B, __A)
-        [val, idx] = Signal.Statictics.findMax(corrBA)
-        maxesBA[i] = if idx > 0 then val else 0
-        __C = new Float32Array(U)
-        __C.set(_C.subarray(U-i, U), 0)
-        corrBC = Signal.fft_smart_overwrap_correlation(_B, __C)
-        [val, idx] = Signal.Statictics.findMax(corrBC)
-        maxesBC[i] = if idx > 0 then val else 0
-      [_, idxBA] = Signal.Statictics.findMax(maxesBA)
-      [_, idxBC] = Signal.Statictics.findMax(maxesBC)
-      # AとB、BとCから見つけたピークを平均
-      max_offset = idxB-range+(idxBC+idxBA)/2
+        __S = new Float32Array(U)
+        __S.set(_S.subarray(U-i, U), 0)
+        corrSS = Signal.fft_smart_overwrap_correlation(_S, __S)
+        [val, idx] = Signal.Statictics.findMax(corrSS)
+        maxesSS[i] = if idx > 0 then val else 0
+      [_, idxSS] = Signal.Statictics.findMax(maxesSS) # これがピーク
+      max_offset = idxS-range+(idxSS+idxSS)/2
       pulseTime = (startPtr + max_offset) / sampleRate
       # title
       _frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"
@@ -188,12 +179,11 @@ collect = (datas)-> (next)->
       offset_arr[T*1] = 255
       offset_arr[T*2] = 255
       offset_arr2 = new Uint8Array(T)
-      offset_arr2[idxB] = 255
-      offset_arr2[idxB-range] = 255
-      offset_arr2[idxB+range] = 255
-      offset_arr3 = new Uint8Array(maxesBA.length)
-      offset_arr3[idxBA] = 255
-      offset_arr3[idxBC] = 255
+      offset_arr2[idxS] = 255
+      offset_arr2[idxS-range] = 255
+      offset_arr2[idxS+range] = 255
+      offset_arr3 = new Uint8Array(maxesSS.length)
+      offset_arr3[idxSS] = 255
       coms = [
         [section, true, true]
         [correl, true, true]
@@ -201,20 +191,16 @@ collect = (datas)-> (next)->
         [A, true, true]
         [B, true, true]
         [C, true, true]
-        [sum, true, true]
+        [S, true, true]
         [offset_arr2, true, true]
-        [_A, true, true]
-        [_B, true, true]
-        [_C, true, true]
+        [_S, true, true]
         [offset_arr3, true, true]
-        [maxesBA, true, true]
-        [maxesBC, true, true]
+        [maxesSS, true, true]
       ].forEach (com, i)->
         render = new Signal.Render(VIEW_SIZE, 64)
         Signal.Render::drawSignal.apply(render, com)
         _frame.add render.element
         _frame.add document.createElement "br"
-      _frame.add document.createTextNode [idxBC,idxBA].join(",")
       {id: _id, max_offset, pulseTime}
     {id, alias, results: _results}
   console.timeEnd("calcCorrel")
