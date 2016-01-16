@@ -125,11 +125,12 @@
     };
     return Promise.resolve().then(function() {
       return requestParallel("ready", {
-        length: 11,
-        seed: n("01001001001"),
+        length: 12,
+        seed: n("111000011001"),
         carrier_freq: 2000,
         isChirp: false,
-        powL: 10
+        powL: 10,
+        PULSE_N: 1
       });
     }).then(function() {
       return log("sockets", io.sockets.sockets.map(function(socket) {

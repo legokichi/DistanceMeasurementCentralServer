@@ -86,7 +86,7 @@ start = ->
 _loop = ->
   n = (a)-> a.split("").map(Number)
   Promise.resolve()
-  .then -> requestParallel "ready", {length: 11, seed: n("01001001001"), carrier_freq: 2000, isChirp: false, powL: 10}
+  .then -> requestParallel "ready", {length: 12, seed: n("111000011001"), carrier_freq: 2000, isChirp: false, powL: 10, PULSE_N: 1}
   .then -> log "sockets", io.sockets.sockets.map (socket)-> socket.id
   .then -> requestParallel "startRec"
   .then ->

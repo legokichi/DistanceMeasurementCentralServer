@@ -43,7 +43,6 @@ analyser.fftSize = 512
 processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1); # between Math.pow(2,8) and Math.pow(2,14).
 MULTIPASS_DISTANCE = 5
 SOUND_OF_SPEED = 340
-PULSE_N = 2
 # need initialize
 recbuf = null
 isRecording    = false
@@ -65,7 +64,7 @@ main = ->
   socket.on "collect",    (a)-> collect(a)    -> socket.emit("collect")
 
 # where
-ready      = ({length, seed, carrier_freq, isChirp, powL})-> (next)->
+ready      = ({length, seed, carrier_freq, isChirp, powL, PULSE_N})-> (next)->
   n = (a)-> a.split("").map(Number)
   document.body.style.backgroundColor = location.hash.slice(1)
   recbuf = new RecordBuffer(actx.sampleRate, processor.bufferSize, processor.channelCount)
@@ -85,7 +84,7 @@ ready      = ({length, seed, carrier_freq, isChirp, powL})-> (next)->
     matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
     ss_sig = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, matched.length*PULSE_N) # modulated
     abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
-    DSSS_SPEC = {abuf, matched: matched.buffer}
+    DSSS_SPEC = {abuf, matched: matched.buffer, PULSE_N}
     console.log matched.length, ss_sig.length, abuf
     ->
       corr = Signal.fft_smart_overwrap_correlation(ss_sig, matched)
@@ -145,6 +144,7 @@ collect = (datas)-> (next)->
   document.body.appendChild frame_.element
   aliases = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
   results = datas.map ({id, alias, startStops, recF32arr, DSSS_SPEC, sampleRate})->
+    {PULSE_N} = DSSS_SPEC
     frame = _craetePictureFrame "#{alias}@#{id}"
     frame_.add frame.element
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
@@ -153,11 +153,17 @@ collect = (datas)-> (next)->
       correl = Signal.fft_smart_overwrap_correlation(section, matched)
       T = matched.length
       correls = [1..PULSE_N].map (_,i)-> correl.subarray(T*i, T*i+T) # 相関結果を切りわける
-      S = new Float32Array(T)
-      S.forEach (_,i)-> S[i] = correls.reduce(((a, correl)-> a + correl[i]), 0) # 全加算
+      mse_correls = correls.map (a)-> a.map (a)-> a*a # 二乗
+      low_correls = mse_correls.map (a)-> _lowpass(a, actx.sampleRate, 1000, 1) # low-pass
+      down_correls = low_correls.map (a)-> new Float32Array(val for val,i in a when i%10 is 0) # ダウンサンプリング
+      S = new Float32Array(T/10|0)
+      S.forEach (_,i)-> S[i] = down_correls.reduce(((a, v)-> a + v[i]), 0) # 全加算
       [_, idxS] = Signal.Statictics.findMax(S)
-      range = MULTIPASS_DISTANCE/SOUND_OF_SPEED*actx.sampleRate|0
+      range = MULTIPASS_DISTANCE/SOUND_OF_SPEED*actx.sampleRate/10|0
       _S = S.subarray(idxS-range, idxS+range)# +-range の区間切り出し
+      #peaks = new Float32Array(down.length)
+      #peaks[i] = 255 for i in [1..down.length] when down[i] - down[i-1] < 0
+      #console.log peaks
       max_offset = idxS
       pulseTime = (startPtr + max_offset) / sampleRate
       # title
@@ -170,21 +176,12 @@ collect = (datas)-> (next)->
       marker2 = new Uint8Array(T)
       marker2[idxS-range] = 255
       marker2[idxS+range] = 255
-      [_, _idxS] = Signal.Statictics.findMax(_S)
-      marker3 = new Uint8Array(range*2)
-      marker3[_idxS] = 255
       coms = [
         [section, true, true]
         [correl, true, true]
         [marker, true, true]
-        [correls[0], true, true]
-        [correls[1], true, true]
         [S, true, true]
-        [marker2, true, true]
         [_S, true, true]
-        [_S.map((v)->v*v), true, true]
-        [_lowpass(_S.map((v)->v*v), actx.sampleRate, 1000, 1), true, true]#.subarray(idxS-range, idxS+range)
-        [marker3, true, true]
       ].forEach (com, i)->
         render = new Signal.Render(VIEW_SIZE, 64)
         Signal.Render::drawSignal.apply(render, com)
