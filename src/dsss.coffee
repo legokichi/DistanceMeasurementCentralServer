@@ -48,7 +48,7 @@ isBroadcasting = false
 pulseStartTime = {}
 pulseStopTime  = {}
 DSSS_SPEC = null
-
+PULSE_N = 2
 
 # main
 main = ->
@@ -79,12 +79,12 @@ ready      = ({length, seed, carrier_freq, isChirp, powL})-> (next)->
       next()
   else
     ss_code = Signal.mseqGen(length, seed) # {1,-1}
-    matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, processor.bufferSize*3) # modulated
-    ss_sig = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, processor.bufferSize*3) # modulated
+    matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
+    ss_sig = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, matched.length*PULSE_N) # modulated
     abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
     DSSS_SPEC = {abuf, matched: matched.buffer}
     console.log matched.length, ss_sig.length, abuf
-    ->
+    do ->
       corr = Signal.fft_smart_overwrap_correlation(ss_sig, matched)
       coms = [
         [matched, true, true]
@@ -147,58 +147,42 @@ collect = (datas)-> (next)->
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
       section = new Float32Array(recF32arr).subarray(startPtr, stopPtr)
       matched = new Float32Array(DSSS_SPEC.matched)
-      correl = Signal.fft_smart_overwrap_correlation(section, matched)
-      # 相関結果を切りわける
       T = matched.length
-      arrs = for i in [0..Math.ceil(correl.length/T)]
-        _arr = new Float32Array(T)
-        _arr.set(correl.subarray(T*i, T*i+T), 0)
-        _arr
-      S = new Float32Array(T)
-      # Sにarrを加算合成
-      for _,i in S
-        sum = 0
-        for arr in arrs
-          sum += arr[i]
-        S[i] = sum
+      correl = Signal.fft_smart_overwrap_correlation(section, matched)
+      ave = Signal.Statictics.average(correl) # 平均化
+      correl[i] = correl[i] - ave for _,i in correl
+      correls = [1..PULSE_N].map (_,i)-> correl.subarray(T*i, T*i+T) # 相関結果を切りわける
+      [_, correl_peak_idx] = Signal.Statictics.findMax(correls[0])
       range = Math.pow(2, 9)
-      [_, idxS] = Signal.Statictics.findMax(S)
-      # 加算したもののピークを基準として +-range の区間切り出し
-      _S = S.subarray(idxS-range, idxS+range)
-      # 平均化
-      ave = Signal.Statictics.average(_S)
-      for _,i in _S
-        _S[i] = _S[i] - ave
+      _correls = correls.map (correl)-> correl.subarray(correl_peak_idx-range, correl_peak_idx+range)# 計算量削減のため +-range の区間切り出し
       U = range*2
-      maxesSS = new Float32Array(U)
+      maxes = new Float32Array(U)
       # パルスを後ろからずらしてエネルギーが最大になる地点を探索。計算量悪し
       for i in [0..U*0.8|0]
-        __S = new Float32Array(U)
-        __S.set(_S.subarray(U-i, U), 0)
-        corrSS = Signal.fft_smart_overwrap_correlation(_S, __S)
-        [val, idx] = Signal.Statictics.findMax(corrSS)
-        maxesSS[i] = if idx > 0 then val else 0
-      [_, idxSS] = Signal.Statictics.findMax(maxesSS) # これがピーク
-      max_offset = idxS-range+(idxSS+idxSS)/2
+        tail_correl = new Float32Array(U)
+        tail_correl.set(_correls[1].subarray(U-i, U), 0)
+        correl_eneg = Signal.fft_smart_overwrap_correlation(_correls[0], tail_correl)
+        [val, max_idx] = Signal.Statictics.findMax(correl_eneg)
+        maxes[i] = if max_idx > 0 then val else 0
+      [_, idx01] = Signal.Statictics.findMax(maxes) # これがピーク
+      max_offset = correl_peak_idx-range+(idx01+idx01)/2
       pulseTime = (startPtr + max_offset) / sampleRate
       # title
       _frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"
       frame.add _frame.element
       S_clipe_range = new Uint8Array(T)
-      S_clipe_range[idxS-range] = 255
-      S_clipe_range[idxS+range] = 255
+      S_clipe_range[correl_peak_idx-range] = 255
+      S_clipe_range[correl_peak_idx+range] = 255
       maxesSS_pt = new Uint8Array(U)
-      maxesSS_pt[idxSS] = 255
-      [_, idxS] = Signal.Statictics.findMax(_S)
-      maxesSS_pt[idxS] = 255
+      maxesSS_pt[idx01] = 255
       coms = [
         [section, true, true]
         [correl, true, true]
-        [S, true, true]
-        [S_clipe_range, true, true]
-        [_S, true, true]
-        [maxesSS_pt, true, true]
-        [maxesSS, true, true]
+        [correls[0], true, true]
+        [correls[1], true, true]
+        [_correls[0], true, true]
+        [_correls[1], true, true]
+        [maxes, true, true]
       ].forEach (com, i)->
         render = new Signal.Render(VIEW_SIZE, 64)
         Signal.Render::drawSignal.apply(render, com)
