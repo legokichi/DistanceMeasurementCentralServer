@@ -41,6 +41,9 @@ analyser = actx.createAnalyser()
 analyser.smoothingTimeConstant = 0
 analyser.fftSize = 512
 processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1); # between Math.pow(2,8) and Math.pow(2,14).
+MULTIPASS_DISTANCE = 5
+SOUND_OF_SPEED = 340
+PULSE_N = 2
 # need initialize
 recbuf = null
 isRecording    = false
@@ -48,7 +51,7 @@ isBroadcasting = false
 pulseStartTime = {}
 pulseStopTime  = {}
 DSSS_SPEC = null
-PULSE_N = 2
+
 
 # main
 main = ->
@@ -84,7 +87,7 @@ ready      = ({length, seed, carrier_freq, isChirp, powL})-> (next)->
     abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
     DSSS_SPEC = {abuf, matched: matched.buffer}
     console.log matched.length, ss_sig.length, abuf
-    do ->
+    ->
       corr = Signal.fft_smart_overwrap_correlation(ss_sig, matched)
       coms = [
         [matched, true, true]
@@ -147,42 +150,41 @@ collect = (datas)-> (next)->
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
       section = new Float32Array(recF32arr).subarray(startPtr, stopPtr)
       matched = new Float32Array(DSSS_SPEC.matched)
-      T = matched.length
       correl = Signal.fft_smart_overwrap_correlation(section, matched)
-      ave = Signal.Statictics.average(correl) # 平均化
-      correl[i] = correl[i] - ave for _,i in correl
+      T = matched.length
       correls = [1..PULSE_N].map (_,i)-> correl.subarray(T*i, T*i+T) # 相関結果を切りわける
-      [_, correl_peak_idx] = Signal.Statictics.findMax(correls[0])
-      range = Math.pow(2, 9)
-      _correls = correls.map (correl)-> correl.subarray(correl_peak_idx-range, correl_peak_idx+range)# 計算量削減のため +-range の区間切り出し
-      U = range*2
-      maxes = new Float32Array(U)
-      # パルスを後ろからずらしてエネルギーが最大になる地点を探索。計算量悪し
-      for i in [0..U*0.8|0]
-        tail_correl = new Float32Array(U)
-        tail_correl.set(_correls[1].subarray(U-i, U), 0)
-        correl_eneg = Signal.fft_smart_overwrap_correlation(_correls[0], tail_correl)
-        [val, max_idx] = Signal.Statictics.findMax(correl_eneg)
-        maxes[i] = if max_idx > 0 then val else 0
-      [_, idx01] = Signal.Statictics.findMax(maxes) # これがピーク
-      max_offset = correl_peak_idx-range+(idx01+idx01)/2
+      S = new Float32Array(T)
+      S.forEach (_,i)-> S[i] = correls.reduce(((a, correl)-> a + correl[i]), 0) # 全加算
+      [_, idxS] = Signal.Statictics.findMax(S)
+      range = MULTIPASS_DISTANCE/SOUND_OF_SPEED*actx.sampleRate|0
+      _S = S.subarray(idxS-range, idxS+range)# +-range の区間切り出し
+      max_offset = idxS
       pulseTime = (startPtr + max_offset) / sampleRate
       # title
       _frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"
       frame.add _frame.element
-      S_clipe_range = new Uint8Array(T)
-      S_clipe_range[correl_peak_idx-range] = 255
-      S_clipe_range[correl_peak_idx+range] = 255
-      maxesSS_pt = new Uint8Array(U)
-      maxesSS_pt[idx01] = 255
+      marker = new Uint8Array(correl.length)
+      [1..PULSE_N].map (_,i)->
+        marker[T*i] = 255
+        marker[T*i+T] = 255
+      marker2 = new Uint8Array(T)
+      marker2[idxS-range] = 255
+      marker2[idxS+range] = 255
+      [_, _idxS] = Signal.Statictics.findMax(_S)
+      marker3 = new Uint8Array(range*2)
+      marker3[_idxS] = 255
       coms = [
         [section, true, true]
         [correl, true, true]
+        [marker, true, true]
         [correls[0], true, true]
         [correls[1], true, true]
-        [_correls[0], true, true]
-        [_correls[1], true, true]
-        [maxes, true, true]
+        [S, true, true]
+        [marker2, true, true]
+        [_S, true, true]
+        [_S.map((v)->v*v), true, true]
+        [_lowpass(_S.map((v)->v*v), actx.sampleRate, 1000, 1), true, true]#.subarray(idxS-range, idxS+range)
+        [marker3, true, true]
       ].forEach (com, i)->
         render = new Signal.Render(VIEW_SIZE, 64)
         Signal.Render::drawSignal.apply(render, com)
@@ -212,7 +214,7 @@ collect = (datas)-> (next)->
       delayTimes[id1] = delayTimes[id1] || {}
       delayTimes[id1][id2] = Math.abs(Math.abs(relDelayTimes[id1][id2]) - Math.abs(relDelayTimes[id2][id1]))
       distances[id1] = distances[id1] || {}
-      distances[id1][id2] = delayTimes[id1][id2]/2*340
+      distances[id1][id2] = delayTimes[id1][id2]/2*SOUND_OF_SPEED
       distancesAliased[aliases[id1]] = distancesAliased[aliases[id1]] || {}
       distancesAliased[aliases[id1]][aliases[id2]] = distances[id1][id2]
   console.timeEnd("calcRelDist")
@@ -282,6 +284,47 @@ _craetePictureFrame = (description) ->
         fieldset.appendChild p
       else fieldset.appendChild element
   }
+# void lowpass(float input[], float output[], int size, float samplerate, float freq, float q)
+_lowpass = (input, sampleRate, freq, q)->
+  ###
+  // float input[]  …入力信号の格納されたバッファ。
+  // flaot output[] …フィルタ処理した値を書き出す出力信号のバッファ。
+  // int   size     …入力信号・出力信号のバッファのサイズ。
+  // float sampleRate … サンプリング周波数。
+  // float freq … カットオフ周波数。
+  // float q    … フィルタのQ値。
+  ###
+  size = input.length
+  output = new Float32Array(size)
+  # // フィルタ係数を計算する
+  omega = 2.0 * Math.PI *  freq　/　sampleRate
+  alpha = Math.sin(omega) / (2.0 * q)
+
+  a0 =  1.0 + alpha;
+  a1 = -2.0 * Math.cos(omega);
+  a2 =  1.0 - alpha;
+  b0 = (1.0 - Math.cos(omega)) / 2.0
+  b1 =  1.0 - Math.cos(omega);
+  b2 = (1.0 - Math.cos(omega)) / 2.0
+
+  # // フィルタ計算用のバッファ変数。
+  in1  = 0.0
+  in2  = 0.0
+  out1 = 0.0
+  out2 = 0.0
+
+  # // フィルタを適用
+  for i in [0..size]
+    #// 入力信号にフィルタを適用し、出力信号として書き出す。
+    output[i] = b0/a0 * input[i] + b1/a0 * in1  + b2/a0 * in2 - a1/a0 * out1 - a2/a0 * out2
+
+    in2  = in1;       #// 2つ前の入力信号を更新
+    in1  = input[i];  #// 1つ前の入力信号を更新
+
+    out2 = out1;      #// 2つ前の出力信号を更新
+    out1 = output[i]; #// 1つ前の出力信号を更新
+
+  return output
 
 # main proc
 window.addEventListener "DOMContentLoaded", -> _prepareRec -> _prepareSpect -> main()
