@@ -119,7 +119,7 @@
     var carrier_freq, isChirp, length, powL, seed;
     length = arg.length, seed = arg.seed, carrier_freq = arg.carrier_freq, isChirp = arg.isChirp, powL = arg.powL;
     return function(next) {
-      var abuf, encoded_data, matched, n, ss_code, ss_sig;
+      var abuf, matched, n, ss_code, ss_sig;
       n = function(a) {
         return a.split("").map(Number);
       };
@@ -143,9 +143,8 @@
         });
       } else {
         ss_code = Signal.mseqGen(length, seed);
-        encoded_data = Signal.encode_chipcode_separated_zero([1, 1, 1], ss_code);
-        matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0);
-        ss_sig = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0);
+        matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, processor.bufferSize * 3);
+        ss_sig = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, processor.bufferSize * 3);
         abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate);
         DSSS_SPEC = {
           abuf: abuf,
@@ -261,26 +260,43 @@
         frame = _craetePictureFrame(alias + "@" + id);
         frame_.add(frame.element);
         _results = startStops.map(function(arg1) {
-          var A, B, C, S, T, U, _, _S, __S, _frame, _id, coms, corrSS, correl, i, idx, idxS, idxSS, j, matched, max_offset, maxesSS, offset_arr, offset_arr2, offset_arr3, pulseTime, range, ref, ref1, ref2, ref3, section, startPtr, stopPtr, val;
+          var S, S_clipe_range, T, U, _, _S, __S, _arr, _frame, _id, arr, arrs, ave, coms, corrSS, correl, i, idx, idxS, idxSS, j, k, l, len, len1, len2, m, matched, max_offset, maxesSS, maxesSS_pt, pulseTime, range, ref, ref1, ref2, ref3, ref4, section, startPtr, stopPtr, sum, val;
           _id = arg1.id, startPtr = arg1.startPtr, stopPtr = arg1.stopPtr;
           section = new Float32Array(recF32arr).subarray(startPtr, stopPtr);
           matched = new Float32Array(DSSS_SPEC.matched);
           correl = Signal.fft_smart_overwrap_correlation(section, matched);
-          T = matched.length * 2;
-          A = correl.subarray(T * 0, T * 0 + T);
-          B = correl.subarray(T * 1, T * 1 + T);
-          C = correl.subarray(T * 2, T * 2 + T);
-          S = B.map(function(_, i) {
-            return A[i] + B[i] + C[i];
-          });
+          T = matched.length;
+          arrs = (function() {
+            var j, ref, results1;
+            results1 = [];
+            for (i = j = 0, ref = Math.ceil(correl.length / T); 0 <= ref ? j <= ref : j >= ref; i = 0 <= ref ? ++j : --j) {
+              _arr = new Float32Array(T);
+              _arr.set(correl.subarray(T * i, T * i + T), 0);
+              results1.push(_arr);
+            }
+            return results1;
+          })();
+          S = new Float32Array(T);
+          for (i = j = 0, len = S.length; j < len; i = ++j) {
+            _ = S[i];
+            sum = 0;
+            for (k = 0, len1 = arrs.length; k < len1; k++) {
+              arr = arrs[k];
+              sum += arr[i];
+            }
+            S[i] = sum;
+          }
           range = Math.pow(2, 9);
           ref = Signal.Statictics.findMax(S), _ = ref[0], idxS = ref[1];
-          _S = S.subarray(idxS - range, idxS + range).map(function(v) {
-            return v * v * v;
-          });
+          _S = S.subarray(idxS - range, idxS + range);
+          ave = Signal.Statictics.average(_S);
+          for (i = l = 0, len2 = _S.length; l < len2; i = ++l) {
+            _ = _S[i];
+            _S[i] = _S[i] - ave;
+          }
           U = range * 2;
           maxesSS = new Float32Array(U);
-          for (i = j = 0, ref1 = U * 0.8 | 0; 0 <= ref1 ? j <= ref1 : j >= ref1; i = 0 <= ref1 ? ++j : --j) {
+          for (i = m = 0, ref1 = U * 0.8 | 0; 0 <= ref1 ? m <= ref1 : m >= ref1; i = 0 <= ref1 ? ++m : --m) {
             __S = new Float32Array(U);
             __S.set(_S.subarray(U - i, U), 0);
             corrSS = Signal.fft_smart_overwrap_correlation(_S, __S);
@@ -292,18 +308,14 @@
           pulseTime = (startPtr + max_offset) / sampleRate;
           _frame = _craetePictureFrame(aliases[id] + "<->" + aliases[_id]);
           frame.add(_frame.element);
-          offset_arr = new Uint8Array(correl.length);
-          offset_arr[max_offset] = 255;
-          offset_arr[T * 0] = 255;
-          offset_arr[T * 1] = 255;
-          offset_arr[T * 2] = 255;
-          offset_arr2 = new Uint8Array(T);
-          offset_arr2[idxS] = 255;
-          offset_arr2[idxS - range] = 255;
-          offset_arr2[idxS + range] = 255;
-          offset_arr3 = new Uint8Array(maxesSS.length);
-          offset_arr3[idxSS] = 255;
-          coms = [[section, true, true], [correl, true, true], [offset_arr, true, true], [A, true, true], [B, true, true], [C, true, true], [S, true, true], [offset_arr2, true, true], [_S, true, true], [offset_arr3, true, true], [maxesSS, true, true]].forEach(function(com, i) {
+          S_clipe_range = new Uint8Array(T);
+          S_clipe_range[idxS - range] = 255;
+          S_clipe_range[idxS + range] = 255;
+          maxesSS_pt = new Uint8Array(U);
+          maxesSS_pt[idxSS] = 255;
+          ref4 = Signal.Statictics.findMax(_S), _ = ref4[0], idxS = ref4[1];
+          maxesSS_pt[idxS] = 255;
+          coms = [[section, true, true], [correl, true, true], [S, true, true], [S_clipe_range, true, true], [_S, true, true], [maxesSS_pt, true, true], [maxesSS, true, true]].forEach(function(com, i) {
             var render;
             render = new Signal.Render(VIEW_SIZE, 64);
             Signal.Render.prototype.drawSignal.apply(render, com);

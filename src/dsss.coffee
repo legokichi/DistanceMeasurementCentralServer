@@ -79,9 +79,8 @@ ready      = ({length, seed, carrier_freq, isChirp, powL})-> (next)->
       next()
   else
     ss_code = Signal.mseqGen(length, seed) # {1,-1}
-    encoded_data = Signal.encode_chipcode_separated_zero([1, 1, 1], ss_code) # {1,0,-1}
-    matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
-    ss_sig = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0) # modulated
+    matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, processor.bufferSize*3) # modulated
+    ss_sig = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, processor.bufferSize*3) # modulated
     abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
     DSSS_SPEC = {abuf, matched: matched.buffer}
     console.log matched.length, ss_sig.length, abuf
@@ -149,15 +148,27 @@ collect = (datas)-> (next)->
       section = new Float32Array(recF32arr).subarray(startPtr, stopPtr)
       matched = new Float32Array(DSSS_SPEC.matched)
       correl = Signal.fft_smart_overwrap_correlation(section, matched)
-      # 相関結果を3つに切りわける [1,0,1,0,1,0,0,0] -> [1,0], [1,0], [1,0]
-      T = matched.length*2
-      A = correl.subarray(T*0, T*0 + T)
-      B = correl.subarray(T*1, T*1 + T)
-      C = correl.subarray(T*2, T*2 + T)
-      S = B.map (_, i)-> A[i]+B[i]+C[i] # 加算する
+      # 相関結果を切りわける
+      T = matched.length
+      arrs = for i in [0..Math.ceil(correl.length/T)]
+        _arr = new Float32Array(T)
+        _arr.set(correl.subarray(T*i, T*i+T), 0)
+        _arr
+      S = new Float32Array(T)
+      # Sにarrを加算合成
+      for _,i in S
+        sum = 0
+        for arr in arrs
+          sum += arr[i]
+        S[i] = sum
       range = Math.pow(2, 9)
-      [_, idxS] = Signal.Statictics.findMax(S) # ABCを加算したもののピークを基準として +-range の区間切り出し
-      _S = S.subarray(idxS-range, idxS+range).map (v)-> v*v*v # 3乗にして符号を保つ
+      [_, idxS] = Signal.Statictics.findMax(S)
+      # 加算したもののピークを基準として +-range の区間切り出し
+      _S = S.subarray(idxS-range, idxS+range)
+      # 平均化
+      ave = Signal.Statictics.average(_S)
+      for _,i in _S
+        _S[i] = _S[i] - ave
       U = range*2
       maxesSS = new Float32Array(U)
       # パルスを後ろからずらしてエネルギーが最大になる地点を探索。計算量悪し
@@ -173,28 +184,20 @@ collect = (datas)-> (next)->
       # title
       _frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"
       frame.add _frame.element
-      offset_arr = new Uint8Array(correl.length)
-      offset_arr[max_offset] = 255
-      offset_arr[T*0] = 255
-      offset_arr[T*1] = 255
-      offset_arr[T*2] = 255
-      offset_arr2 = new Uint8Array(T)
-      offset_arr2[idxS] = 255
-      offset_arr2[idxS-range] = 255
-      offset_arr2[idxS+range] = 255
-      offset_arr3 = new Uint8Array(maxesSS.length)
-      offset_arr3[idxSS] = 255
+      S_clipe_range = new Uint8Array(T)
+      S_clipe_range[idxS-range] = 255
+      S_clipe_range[idxS+range] = 255
+      maxesSS_pt = new Uint8Array(U)
+      maxesSS_pt[idxSS] = 255
+      [_, idxS] = Signal.Statictics.findMax(_S)
+      maxesSS_pt[idxS] = 255
       coms = [
         [section, true, true]
         [correl, true, true]
-        [offset_arr, true, true]
-        [A, true, true]
-        [B, true, true]
-        [C, true, true]
         [S, true, true]
-        [offset_arr2, true, true]
+        [S_clipe_range, true, true]
         [_S, true, true]
-        [offset_arr3, true, true]
+        [maxesSS_pt, true, true]
         [maxesSS, true, true]
       ].forEach (com, i)->
         render = new Signal.Render(VIEW_SIZE, 64)

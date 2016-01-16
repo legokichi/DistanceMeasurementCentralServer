@@ -125,8 +125,8 @@
     };
     return Promise.resolve().then(function() {
       return requestParallel("ready", {
-        length: 9,
-        seed: n("000100001"),
+        length: 11,
+        seed: n("01001001001"),
         carrier_freq: 2000,
         isChirp: false,
         powL: 10
