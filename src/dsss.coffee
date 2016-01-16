@@ -48,6 +48,7 @@ isRecording    = false
 isBroadcasting = false
 pulseStartTime = {}
 pulseStopTime  = {}
+correlCache = {}
 DSSS_SPEC = null
 
 
@@ -80,11 +81,26 @@ ready      = ({length, seed, carrier_freq, isChirp, powL})-> (next)->
       next()
   else
     ss_code = Signal.mseqGen(length, seed) # {1,-1}
-    encoded_data = Signal.encode_chipcode([1], ss_code) # {1,0,-1}
+    encoded_data = Signal.encode_chipcode_separated_zero([1, 1], ss_code) # {1,0,-1}
     matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
-    abuf = osc.createAudioBufferFromArrayBuffer(matched, actx.sampleRate)
+    ss_sig = Signal.BPSK(encoded_data, carrier_freq, actx.sampleRate, 0) # modulated
+    abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
     DSSS_SPEC = {abuf, matched: matched.buffer}
     next()
+    return
+
+    corr = Signal.fft_smart_overwrap_correlation(ss_sig, matched)
+    coms = [
+      [matched, true, true]
+      [ss_sig, true, true]
+      [corr, true, true]
+    ].forEach (com, i)->
+      render = new Signal.Render(VIEW_SIZE, 64)
+      Signal.Render::drawSignal.apply(render, com)
+      document.body.appendChild render.element
+      document.body.appendChild document.createElement "br"
+
+
 startRec   = (next)-> isRecording = true; next()
 startPulse = (id)-> (next)-> pulseStartTime[id] = actx.currentTime; next()
 beepPulse  = (next)->
@@ -126,13 +142,21 @@ collect = (datas)-> (next)->
   console.info("calcCorrel")
   console.time("calcCorrel")
   results = datas.map ({id, alias, startStops, recF32arr, DSSS_SPEC, sampleRate})->
+    correlCache[id] = correlCache[id] || {}
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
       section = new Float32Array(recF32arr).subarray(startPtr, stopPtr)
       {matched} = DSSS_SPEC
       correl = Signal.fft_smart_overwrap_correlation(section, new Float32Array(matched))
+      correlCache[id][_id] = correlCache[id][_id] || [null, null]
+      correlCache[id][_id].shift()
+      correlCache[id][_id].push correl
+      [prev, curr] = correlCache[id][_id]
+      if prev? and curr?
+      then raked = Signal.fft_smart_overwrap_correlation(prev, curr)
+      else raked = null
       [max_score, max_offset] = Signal.Statictics.findMax(correl)
       pulseTime = (startPtr + max_offset) / sampleRate
-      {id: _id, section, correl, max_score, max_offset, pulseTime}
+      {id: _id, section, correl, max_score, max_offset, pulseTime, raked}
     {id, alias, results: _results}
   console.timeEnd("calcCorrel")
   console.info("calcRelDist")
@@ -180,7 +204,7 @@ collect = (datas)-> (next)->
     results.forEach ({id, alias, results, sampleRate})->
       frame = _craetePictureFrame "#{alias}@#{id}"
       frame_.add frame.element
-      results.forEach ({id: _id, section, correl, max_offset, peakIndexes})->
+      results.forEach ({id: _id, section, correl, max_offset, raked})->
         # title
         _frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"
         frame.add _frame.element
@@ -215,6 +239,11 @@ collect = (datas)-> (next)->
         render.ctx.strokeStyle = "red"
         render.drawSignal(offset_arr, true, true)
         _frame.add render.element
+        # rake
+        if raked?
+          render = new Signal.Render(VIEW_SIZE, 127)
+          render.drawSignal(raked, true, true)
+          _frame.add render.element
     # relpos
     render = new Signal.Render(Math.pow(2, 8), Math.pow(2, 8))
     basePt = sdm.points[0]
