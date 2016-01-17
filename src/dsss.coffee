@@ -44,6 +44,7 @@ processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1); # between Math.po
 MULTIPASS_DISTANCE = 5
 SOUND_OF_SPEED = 340
 TEST_INPUT_MYSELF = false
+_low_section_matched_ranges = {}
 # need initialize
 recbuf = null
 isRecording    = false
@@ -63,7 +64,9 @@ main = ->
   socket.on "stopPulse",  (a)-> stopPulse(a)  -> socket.emit("stopPulse")
   socket.on "stopRec",       -> stopRec       -> socket.emit("stopRec")
   socket.on "sendRec",       -> sendRec    (a)-> socket.emit("sendRec", a)
-  socket.on "collect",    (a)-> collect(a)    -> socket.emit("collect")
+  socket.on "collect",    (a)-> collect(a) (a)-> socket.emit("collect", a)
+  socket.on "play",       (a)-> play(a)       -> socket.emit("play")
+
 
 # where
 ready      = ({length, seed, carrier_freq, isChirp, powL, PULSE_N})-> (next)->
@@ -75,31 +78,24 @@ ready      = ({length, seed, carrier_freq, isChirp, powL, PULSE_N})-> (next)->
   pulseStartTime = {}
   pulseStopTime  = {}
   DSSS_SPEC = null
-  if isChirp
-    ss_code = Signal.mseqGen(length, seed)
-    osc.resampling(Signal.createCodedChirp(ss_code, powL), 14).then (matched)->
-      abuf = osc.createAudioBufferFromArrayBuffer(matched, actx.sampleRate)
-      DSSS_SPEC = {abuf, matched: matched.buffer}
-      next()
-  else
-    ss_code = Signal.mseqGen(length, seed) # {1,-1}
-    matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
-    ss_sig = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, matched.length*PULSE_N) # modulated
-    abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
-    DSSS_SPEC = {abuf, matched: matched.buffer, PULSE_N}
-    console.log matched.length, ss_sig.length, abuf
-    ->
-      corr = Signal.fft_smart_overwrap_correlation(ss_sig, matched)
-      coms = [
-        [matched, true, true]
-        [ss_sig, true, true]
-        [corr, true, true]
-      ].forEach (com, i)->
-        render = new Signal.Render(com[0].length/100, 64)
-        Signal.Render::drawSignal.apply(render, com)
-        document.body.appendChild render.element
-        document.body.appendChild document.createElement "br"
-    next()
+  ss_code = Signal.mseqGen(length, seed) # {1,-1}
+  matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
+  ss_sig = matched#Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, matched.length*PULSE_N) # modulated
+  abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
+  DSSS_SPEC = {abuf, length, seed, carrier_freq, isChirp, powL, PULSE_N}
+  console.log matched.length, ss_sig.length, abuf
+  ->
+    corr = Signal.fft_smart_overwrap_correlation(ss_sig, matched)
+    coms = [
+      [matched, true, true]
+      [ss_sig, true, true]
+      [corr, true, true]
+    ].forEach (com, i)->
+      render = new Signal.Render(com[0].length/100, 64)
+      Signal.Render::drawSignal.apply(render, com)
+      document.body.appendChild render.element
+      document.body.appendChild document.createElement "br"
+  next()
 
 
 startRec   = (next)-> isRecording = true; next()
@@ -114,7 +110,7 @@ beepPulse  = (next)->
   anode.start(actx.currentTime)
   startTime = actx.currentTime
   do recur = ->
-    if (startTime + abuf.duration) < actx.currentTime
+    if (startTime + abuf.duration * 1.2) < actx.currentTime
     then next()
     else setTimeout(recur, 100)
 stopPulse  = (id)-> (next)-> pulseStopTime[id] = actx.currentTime; next()
@@ -125,10 +121,12 @@ sendRec    = (next)->
   recStopTime = recbuf.sampleTimes[recbuf.sampleTimes.length-1]
   startStops = Object.keys(pulseStartTime).map (id)->
     startPtr = (pulseStartTime[id] - recStartTime) * recbuf.sampleRate
-    stopPtr = (pulseStopTime[id] - recStartTime) * recbuf.sampleRate
+    stopPtr = (pulseStopTime[id] - recStartTime + 1) * recbuf.sampleRate
     {id, startPtr, stopPtr}
   o =
     id: socket.id
+    recStartTime: recStartTime
+    recStopTime: recStopTime
     alias: location.hash.slice(1)
     startStops: startStops
     pulseStartTime: pulseStartTime
@@ -143,204 +141,152 @@ sendRec    = (next)->
   next(o)
 collect = (datas)-> (next)->
   if location.hash.slice(1) isnt "red" then return next()
-  console.info("calcCorrel")
-  console.time("calcCorrel")
-  frame_ = _craetePictureFrame ""
-  document.body.appendChild frame_.element
+  frame = _craetePictureFrame "collect", document.body
   aliases = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
   results = datas.map ({id, alias, startStops, recF32arr, DSSS_SPEC, sampleRate})->
-    {PULSE_N} = DSSS_SPEC
-    frame = _craetePictureFrame "#{alias}@#{id}"
-    frame_.add frame.element
+    {length, seed, carrier_freq, isChirp, powL, PULSE_N} = DSSS_SPEC
+    _frame = _craetePictureFrame "#{alias}@#{id}"; frame.add _frame.element
+    ss_code = Signal.mseqGen(length, seed) # {1,-1}
+    matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
+    recF32arr = new Float32Array(recF32arr)
+    #_frame.view recF32arr, "recF32arr"
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
-      _frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"
-      frame.add _frame.element
-      view = (arr, title)->
-        __frame = _craetePictureFrame title + "(#{arr.length})"
-        width = if VIEW_SIZE < arr.length then VIEW_SIZE else arr.length
-        render = new Signal.Render(width, 64)
-        Signal.Render::drawSignal.apply(render, [arr, true, true])
-        __frame.add render.element
-        _frame.add __frame.element
-        _frame.add document.createElement "br"
-      text = (title)->
-        _frame.add document.createTextNode title
-        _frame.add document.createElement "br"
-      matched = new Float32Array(DSSS_SPEC.matched)
+      __frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"; _frame.add __frame.element
       T = matched.length
-      recF32arr = new Float32Array(recF32arr)
-      correl_full = Signal.fft_smart_overwrap_correlation(recF32arr, matched)
       section = recF32arr.subarray(startPtr, stopPtr)
-      view section, "section"
-      correl = correl_full.subarray(startPtr, stopPtr)
-      view correl, "correl"
-      marker = new Uint8Array(correl.length)
-      correls = for i in [0..correl.length/T|0]
-        marker[T*i] = 255
-        marker[T*i+T] = 255
-        a = correl.subarray(T*i, T*i+T)# 相関結果を切りわける
-        if a.length is T
-        then a
-        else
-          b = new Float32Array(T)
-          b.set(a, 0)
-          b
-      view marker, "marker"
-      summed = new Float32Array(T)
-      summed.forEach (_,i)-> summed[i] = correls.reduce(((a, v)-> a + v[i]), 0) # 全加算
-      view summed, "summed"
-      # correlsからsummedとの相関が大きいものを探す
-      maxes = correls.map (correl, i)-> {val:Signal.fft_smart_overwrap_correlation(correl, summed)[0], i}
-      text "maxes:#{JSON.stringify(maxes)}"
-      [_target] = maxes.sort (a, b)-> a.val < b.val
-      target = correls[_target.i]
-      src = correls[_target.i+1]
-      text "correl#{_target.i}, correl#{_target.i+1}"
-      # rake合成
-      target_self = Signal.fft_smart_overwrap_correlation(target, target)
-      src_self = Signal.fft_smart_overwrap_correlation(src, src)
-      normalize_val = target_self[0] + src_self[0]
-      raked = Signal.fft_smart_overwrap_correlation(target, src).map (v, i)-> v/normalize_val
-      view raked, "raked(0)=#{raked[0]}" # raked は SN比計算に使う
-      # 二分探索で一番相関してる場所を探す
-      offset = 0
-      length = src.length
-      while length > Math.pow(2, 10)
-        trgview = target.subarray(offset, offset+length)
-        srcview = src.subarray(offset, offset+length)
-        length = length/2|0
-        text "offset:" + offset
-        text "length:" + length
-        srcL = src.subarray(offset,        offset+length)
-        srcR = src.subarray(offset+length, offset+length+length)
-        view trgview, "trgview"
-        view srcview, "srcview"
-        view Signal.fft_smart_overwrap_correlation(trgview, srcview), "correlviews"
-        # 正規化相互相関関数
-        correlL = Signal.fft_smart_overwrap_correlation(trgview, srcL).map (v, i)-> v/normalize_val
-        correlR = Signal.fft_smart_overwrap_correlation(trgview, srcR).map (v, i)-> v/normalize_val
-        view correlL, "correlL"
-        view correlR, "correlR"
-        text [valL, idL] = Signal.Statictics.findMax(correlL)
-        text [valR, idR] = Signal.Statictics.findMax(correlR)
-        switch Math.max(valL, valR)
-          when valL then offset += idL; text "left"
-          when valR then offset += idR; text "right"
-      view target, "target"
-      marker = new Uint8Array(target.length)
+      __frame.view section, "section"
+      section_matched = Signal.fft_smart_overwrap_correlation(section, matched)
+      __frame.view section_matched, "section * matched"
+      __frame.text [val, idx] = Signal.Statictics.findMax(section_matched)
+      range = MULTIPASS_DISTANCE/SOUND_OF_SPEED*sampleRate|0
+      begin = idx-range; if begin < 0 then begin = 0
+      end   = idx+range
+      zoom_ratio = 50
+      start = idx-section_matched.length/zoom_ratio|0; if start < 0 then start = 0
+      stop  = idx+section_matched.length/zoom_ratio|0
+      #section_matched_zoom = section_matched.subarray(start, stop)
+      #__frame.view section_matched_zoom, "section * matched, zoom#{zoom_ratio}"
+      section_matched_range = section_matched.subarray(begin, end)
+      __frame.view section_matched_range, "section * matched, range#{MULTIPASS_DISTANCE}"
+      mse_section_matched_range = section_matched_range.map (a)-> a*a # 二乗
+      #__frame.view mse_section_matched_range, "section * matched, mse"
+      cutoff = 1000
+      low_section_matched_range = _lowpass(mse_section_matched_range, actx.sampleRate, cutoff, 1) # low-pass
+      __frame.view low_section_matched_range, "section * matched, lowpass#{cutoff}"
+      #sort_section_matched_range = new Float32Array(low_section_matched_range)
+      #sort_section_matched_range.sort((a, b)-> a - b)
+      #__frame.view sort_section_matched_range, "section * matched, sort"
+      vari = Signal.Statictics.variance(low_section_matched_range)
+      ave = Signal.Statictics.average(low_section_matched_range)
+      med = Signal.Statictics.median(low_section_matched_range)
+      threshold = 80
+      stdscore_section_matched_range = low_section_matched_range.map (x)-> 10 * (x - ave) / vari + 50
+      flag = true
+      while flag
+        for v, offset in stdscore_section_matched_range
+          if threshold < v && med < v && ave < v
+            flag = false
+            break
+        threshold -= 1
+      marker = new Uint8Array(low_section_matched_range.length)
       marker[offset] = 255
-      view marker, "marker"
-      view section, "section"
-      view correl, "correl"
-      marker = new Uint8Array(correl.length)
-      marker[_target.i*T+offset] = 255
-      view marker, "marker"
-      ###
-      mse_correls = correls.map (a)-> a.map (a)-> a*a # 二乗
-      low = _lowpass(summed, actx.sampleRate, 1000, 1) # low-pass
-      down_sample_ratio = 10
-      down = new Float32Array(val for val,i in low when i%down_sample_ratio is 0) # 畳み込みの計算量削減のためのダウンサンプリング
-      windowSize = down.length/1000|0
-      conved = down.map (_, i)-> down.subarray(i, i+windowSize).reduce(((a,b)-> a+b), 0) # 係数なしで畳み込み
-      conved_low = _lowpass(conved, actx.sampleRate, 1000, 1) # low-pass
-      [_, idx_down] = Signal.Statictics.findMax(conved_low)
-      i_down = idx_down
-      while --i_down && conved_low[i_down-1] < conved_low[i_down] then ;
-      max_offset_down = i_down + windowSize|0
-      max_offset = max_offset_down * down_sample_ratio|0
-      ###
-      max_offset = 0
+      __frame.view marker, "offset#{offset}"
+      max_offset = begin + offset
       pulseTime = (startPtr + max_offset) / sampleRate
-      ###
-      clip_ratio = 70
-      range = summed.length/clip_ratio|0
-      range_down = down.length/clip_ratio|0#MULTIPASS_DISTANCE/SOUND_OF_SPEED*actx.sampleRate/10|0
-      [_, idx] = Signal.Statictics.findMax(summed)
-      idx_down = idx/10|0
-      # title
-      ###
-      ###
-      start = if idx-range < 0 then 0 else idx-range
-      stop  = idx+range
-      start_down = if idx_down-range_down < 0 then 0 else idx_down-range_down
-      stop_down = idx_down+range_down
-      ###
-
-
-      ###
-      marker3 = new Uint8Array(T)
-      marker3[start] = 255
-      marker3[max_offset] = 255
-      marker3[stop] = 255
-      marker4 = new Uint8Array(down.length).subarray(start_down, stop_down)
-      console.log max_offset_down, i_down, idx_down
-      marker4[max_offset_down] = 255
-      marker4[i_down] = 255
-      marker4[idx_down] = 255
-
-      [summed, true, true]
-      [low, true, true]
-      [down, true, true]
-      [conved, true, true]
-      [conved_low, true, true]
-      [marker3, true, true]
-      [summed.subarray(start, stop), true, true]
-      [low.subarray(start, stop), true, true]
-      [down.subarray(start_down, stop_down), true, true]
-      [conved.subarray(start_down, stop_down), true, true]
-      [conved_low.subarray(start_down, stop_down), true, true]
-      [marker4, true, true]
-      ###
+      _low_section_matched_ranges[id] = _low_section_matched_ranges[id] || {}
+      _low_section_matched_ranges[id][_id] = _low_section_matched_ranges[id][_id] || new Float32Array(low_section_matched_range.length)
+      _low_section_matched_ranges[id][_id].forEach (_, i)->
+        _low_section_matched_ranges[id][_id][i] += low_section_matched_range[i]
+      __frame.view _low_section_matched_ranges[id][_id], "_low_section_matched_ranges[#{id}][#{_id}]"
       {id: _id, max_offset, pulseTime}
     {id, alias, results: _results}
-  console.timeEnd("calcCorrel")
-  console.info("calcRelDist")
-  console.time("calcRelDist")
   sampleRates = datas.reduce(((o, {id, sampleRate})-> o[id] = sampleRate; o), {})
-  pulseTimes = {}
-  relDelayTimes = {}
-  delayTimes = {}
+  recStartTimes = datas.reduce(((o, {id, recStartTime})-> o[id] = recStartTime; o), {})
+  pulseTimes = {} # 各端末時間での録音開始してからの自分のパルスを鳴らした時間
+  relDelayTimes = {} # 自分にとって相手の音は何秒前or何秒後に聞こえたか。delayTimes算出に必要
+  delayTimes = {} # 音速によるパルスの伝播時間
   distances = {}
+  relDelayTimesAliased = {}
   distancesAliased = {}
+  delayTimesAliased = {}
+  pulseTimesAliased = {}
   results.forEach ({id, alias, results})->
-    results.forEach ({id: _id, section, results, correl, max_score, max_offset, stdev, stdscore, pulseTime})->
+    results.forEach ({id: _id, max_offset, pulseTime})->
       pulseTimes[id] = pulseTimes[id] || {}
       pulseTimes[id][_id] = pulseTime
+      pulseTimesAliased[aliases[id]] = pulseTimesAliased[aliases[id]] || {}
+      pulseTimesAliased[aliases[id]][aliases[_id]] = pulseTimes[id][_id]
   Object.keys(pulseTimes).forEach (id1)->
     Object.keys(pulseTimes).forEach (id2)->
       relDelayTimes[id1] = relDelayTimes[id1] || {}
       relDelayTimes[id1][id2] = pulseTimes[id1][id2] - pulseTimes[id1][id1]
+      relDelayTimesAliased[aliases[id1]] = relDelayTimesAliased[aliases[id1]] || {}
+      relDelayTimesAliased[aliases[id1]][aliases[id2]] = relDelayTimes[id1][id2]
   Object.keys(pulseTimes).forEach (id1)->
     Object.keys(pulseTimes).forEach (id2)->
       delayTimes[id1] = delayTimes[id1] || {}
       delayTimes[id1][id2] = Math.abs(Math.abs(relDelayTimes[id1][id2]) - Math.abs(relDelayTimes[id2][id1]))
+      delayTimesAliased[aliases[id1]] = delayTimesAliased[aliases[id1]] || {}
+      delayTimesAliased[aliases[id1]][aliases[id2]] = delayTimes[id1][id2]
       distances[id1] = distances[id1] || {}
       distances[id1][id2] = delayTimes[id1][id2]/2*SOUND_OF_SPEED
       distancesAliased[aliases[id1]] = distancesAliased[aliases[id1]] || {}
       distancesAliased[aliases[id1]][aliases[id2]] = distances[id1][id2]
-  console.timeEnd("calcRelDist")
-  console.info("distancesAliased", distancesAliased)
-  ->
-    console.info("calcRelPos")
-    console.time("calcRelPos")
-    ds = Object.keys(delayTimes).map (id1)->
-      Object.keys(delayTimes).map (id2)->
-        distances[id1][id2]
-    pseudoPts = results.map((id1, i)-> new Point(Math.random()*10, Math.random()*10))
-    sdm = new SDM(pseudoPts, ds)
-    K = 0
-    while K++ < 200
-      sdm.step()
-    console.timeEnd("calcRelPos")
-    console.info("calcRelPos", sdm.det(), sdm.points)
-    # relpos
-    render = new Signal.Render(Math.pow(2, 8), Math.pow(2, 8))
-    basePt = sdm.points[0]
-    sdm.points.forEach (pt)->
-      render.cross(render.cnv.width/2+(pt.x-basePt.x)*10, render.cnv.height/2+(pt.y-basePt.y)*10, 16)
-    document.body.appendChild render.element
-    document.body.style.backgroundColor = "lime"
-  next()
+  if console.table?
+    console.group("table")
+    console.info("recStartTimes", recStartTimes)
+    console.info("pulseTimesAliased");    console.table(pulseTimesAliased)
+    console.info("relDelayTimesAliased"); console.table(relDelayTimesAliased)
+    console.info("delayTimesAliased");    console.table(delayTimesAliased)
+    console.info("distancesAliased");     console.table(distancesAliased)
+    console.groupEnd()
+  ds = Object.keys(delayTimes).map (id1)->
+    Object.keys(delayTimes).map (id2)->
+      distances[id1][id2]
+  pseudoPts = results.map((id1, i)-> new Point(Math.random()*10, Math.random()*10))
+  sdm = new SDM(pseudoPts, ds)
+  K = 0
+  while K++ < 200
+    sdm.step()
+  #console.info("calcRelPos", sdm.det())
+  #console.table(sdm.points)
+  # relpos
+  render = new Signal.Render(Math.pow(2, 8), Math.pow(2, 8))
+  basePt = sdm.points[0]
+  sdm.points.forEach (pt)->
+    render.cross(render.cnv.width/2+(pt.x-basePt.x)*10, render.cnv.height/2+(pt.y-basePt.y)*10, 16)
+  document.body.appendChild render.element
+  document.body.style.backgroundColor = "lime"
+  next({pulseTimes, delayTimes, aliases, currentTime: actx.currentTime, recStartTimes})
+play = (data)-> (next)->
+  console.log data
+  {wait, pulseTimes, delayTimes, id, currentTime, recStartTimes, now, now2} = data
+  # pulseTimes[socket.id][id] 自分がidの音を聞いた時刻
+  # delayTimes[id][socket.id] 自分がidの音を聞いた時刻にidが実際に音を放っていた時間までの僅差
+  # pulseTimes[socket.id][id] - delayTimes[id][socket.id] 自分の時間でidが実際に音を放っていた時間
+  # actx.currentTime - (pulseTimes[socket.id][id] - delayTimes[id][socket.id]) 自分の時間でidが実際に音を放っていた時間、からの現在までの経過時間
+  console.log actx.currentTime
+  console.log offsetTime = recStartTimes[socket.id] + (
+    pulseTimes[socket.id][id] - delayTimes[socket.id][id]
+  ) + (
+    currentTime - (pulseTimes[id][id] + recStartTimes[id])
+  ) + (now2 - now)/1000 + wait + 3
+  matched = Signal.BPSK([1], 2000, actx.sampleRate, 0, actx.sampleRate*1)
+  abuf = osc.createAudioBufferFromArrayBuffer(matched, actx.sampleRate)
+  setTimeout (->
+    node = osc.createAudioNodeFromAudioBuffer(abuf)
+    node.start(offsetTime+1)
+    node.loop = false
+    node.connect(actx.destination)
+    next()
+  ), 2000
+  -> osc.createAudioBufferFromURL("./TellYourWorld1min.mp3").then (abuf)->
+    node = osc.createAudioNodeFromAudioBuffer(abuf)
+    node.start(offsetTime)
+    node.loop = true
+    node.connect(actx.destination)
+    next()
+
 _prepareRec = (next)->
   left  = (err)-> throw err
   right = (stream)->
@@ -369,7 +315,7 @@ _prepareSpect = (next)->
     rndr.drawSpectrogram(spectrums)
     requestAnimationFrame(render)
   next()
-_craetePictureFrame = (description) ->
+_craetePictureFrame = (description, target) ->
   fieldset = document.createElement('fieldset')
   style = document.createElement('style')
   style.appendChild(document.createTextNode("canvas,img{border:1px solid black;}"))
@@ -380,6 +326,7 @@ _craetePictureFrame = (description) ->
   fieldset.appendChild(legend)
   fieldset.style.display = 'inline-block'
   fieldset.style.backgroundColor = "#D2E0E6"
+  target.appendChild fieldset if target?
   return {
     element: fieldset
     add: (element)->
@@ -389,6 +336,17 @@ _craetePictureFrame = (description) ->
         p.appendChild txtNode
         fieldset.appendChild p
       else fieldset.appendChild element
+    view: (arr, title)->
+      __frame = _craetePictureFrame title + "(#{arr.length})"
+      width = if VIEW_SIZE < arr.length then VIEW_SIZE else arr.length
+      render = new Signal.Render(width, 64)
+      Signal.Render::drawSignal.apply(render, [arr, true, true])
+      __frame.add render.element
+      @add __frame.element
+      @add document.createElement "br"
+    text: (title)->
+      @add document.createTextNode title
+      @add document.createElement "br"
   }
 # void lowpass(float input[], float output[], int size, float samplerate, float freq, float q)
 _lowpass = (input, sampleRate, freq, q)->

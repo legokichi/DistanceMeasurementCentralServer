@@ -29,6 +29,11 @@ api_router.get '/stop', (req, res)->
   res.send()
   stop()
 
+api_router.get '/play', (req, res)->
+  res.statusCode = 204
+  res.send()
+  play()
+
 api_router.post "/push", (req, res)->
   form = new formidable.IncomingForm()
   form.encoding = "utf-8";
@@ -54,8 +59,6 @@ io.on 'connection', (socket)->
   socket.on 'echo', (data)-> socket.emit("echo", data)
   socket.on 'event', console.info.bind(console, "event")
   socket.on 'disconnect', console.info.bind(console, "disconnect")
-  socket.on 'start', -> start()
-  socket.on 'stop', -> stop()
 
 server.listen(8000)
 
@@ -70,7 +73,7 @@ server.listen(8000)
 # length: 11, seed: n("00011001111")
 # length:  9, seed: n("000100001")
 # length:  6, seed: n("0010001")
-
+TIME_DATA = null
 isLooping = false
 stop = ->
   isLooping = false
@@ -86,7 +89,7 @@ start = ->
 _loop = ->
   n = (a)-> a.split("").map(Number)
   Promise.resolve()
-  .then -> requestParallel "ready", {length: 9, seed: n("000100001"), carrier_freq: 2000, isChirp: false, powL: 10, PULSE_N: 2}
+  .then -> requestParallel "ready", {length: 12, seed: n("101101010111"), carrier_freq: 3000, isChirp: false, powL: 10, PULSE_N: 1}
   .then -> log "sockets", io.sockets.sockets.map (socket)-> socket.id
   .then -> requestParallel "startRec"
   .then ->
@@ -101,9 +104,22 @@ _loop = ->
   .then -> requestParallel "stopRec"
   .then -> requestParallel "sendRec"
   .then (datas)-> calc(datas); requestParallel "collect", datas
+  .then (datas)->
+    TIME_DATA = datas.filter((a)-> a?)[0]
+    TIME_DATA.now = Date.now()
+    console.log "TIME_DATA", TIME_DATA
   .then -> console.info "end"
   .then -> if isLooping then setTimeout(_loop)
   .catch (err)-> console.error err, err.stack
+
+
+play = ->
+  console.log "TIME_DATA", TIME_DATA
+  TIME_DATA.wait = 2
+  TIME_DATA.now2 = Date.now()
+  TIME_DATA.id = Object.keys(TIME_DATA.aliases).filter((id)->TIME_DATA.aliases[id] = "red")[0]
+  requestParallel("play", TIME_DATA).then ->
+    console.log "to play..."
 
 request = (socket, eventName, data)->
   new Promise (resolve, reject)->
