@@ -43,6 +43,8 @@ server.listen(8000)
 
 
 # length: 15, seed: n("100000000000001")
+# length: 14, seed: n("11000000000101")
+# length: 13, seed: n("1011000000001")
 # length: 12, seed: n("111000011001")
 # length: 12, seed: n("101101010111")
 # length: 12, seed: n("100101000001")

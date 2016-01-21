@@ -1,23 +1,15 @@
 class this.TimeSpreadEcho
-  constructor: (@actx, @pn)->
-    @osc = new OSC(@actx)
-    @offset = 30
-    @beta = 1/@pn.length/10
-    @processor = @actx.createScriptProcessor(Math.pow(2, 14), 1, 1)
-    @handler = (ev)=>
-      buffer = ev.inputBuffer.getChannelData(0)
-      @process(buffer)
-      ev.outputBuffer.getChannelData(0).set(buffer, 0)
-    @processor.addEventListener("audioprocess", @handler)
-    @cacheBufferA = new Float32Array(@processor.bufferSize*2)
-    @cacheBufferB = new Float32Array(@processor.bufferSize*2)
-    @cache = new Float32Array(@processor.bufferSize)
-  process: (buffer)->
+  constructor: (@pn, @bufferSize)->
+    @cacheBufferA = new Float32Array(@bufferSize*2)
+    @cacheBufferB = new Float32Array(@bufferSize*2)
+    @cache = new Float32Array(@bufferSize)
+    @offset = 300
+    @beta = 0.08
+  encode: (buffer)->
     signal = @cacheBufferA
     kernel = @cacheBufferB
     signal.set(buffer, 0)
-    kernel.set(@pn.map((v)=> v*@beta), @offset); kernel[0] = 1
-    view kernel,1024
+    kernel.set(@pn.map((v,i)=> v*@beta*(@pn.length-i)/@pn.length), @offset); kernel[0] = 1
     # ここから畳み込み
     _signal = Signal.fft(signal)
     _kernel = Signal.fft(kernel)
@@ -33,6 +25,13 @@ class this.TimeSpreadEcho
     buffer.set(@cache, 0)
     @cache = B
     return
-  destructor: ->
-    @processor.removeEventListener("audioprocess", @handler)
-    @processor.disconnect()
+  decode: (buffer)->
+    {real, imag} = Signal.fft(buffer)
+    _real = real.map (v)-> Math.log(Math.abs(v))
+    _imag = imag.map (v, i)-> Math.atan2(real[i], imag[i])#/Math.PI*180#(deg)
+    cepstrum = Signal.ifft(_real, _imag)
+    correl = Signal.fft_smart_overwrap_correlation(cepstrum, @pn)
+    _correl = correl.map (v)->v*v
+    view _correl, 1024
+    [_, offset] = Signal.Statictics.findMax(_correl)
+    return offset
