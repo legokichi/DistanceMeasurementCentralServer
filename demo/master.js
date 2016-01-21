@@ -249,6 +249,9 @@
           space.set(section, 0);
           section_matched = Signal.fft_smart_overwrap_correlation(space, matched);
           section_matched = section_matched.subarray(0, section.length);
+          section_matched.forEach(function(_, i) {
+            return section_matched[i] = section_matched[i] * section_matched[i];
+          });
           __frame.view(section_matched, "section * matched");
           __frame.text((ref = Signal.Statictics.findMax(section_matched), val = ref[0], idx = ref[1], ref));
           range = MULTIPASS_DISTANCE / SOUND_OF_SPEED * sampleRate | 0;
@@ -271,7 +274,7 @@
           __frame.view(low_section_matched_range, "section * matched, lowpass" + cutoff);
           vari = Signal.Statictics.variance(low_section_matched_range);
           ave = Signal.Statictics.average(low_section_matched_range);
-          threshold = 80;
+          threshold = 78;
           stdscore_section_matched_range = low_section_matched_range.map(function(x) {
             return 10 * (x - ave) / vari + RULED_LINE_INTERVAL;
           });
@@ -527,7 +530,7 @@
     legend.appendChild(document.createTextNode(description));
     fieldset.appendChild(legend);
     fieldset.style.display = 'inline-block';
-    fieldset.style.backgroundColor = "#D2E0E6";
+    fieldset.style.backgroundColor = "white";
     if (target != null) {
       target.appendChild(fieldset);
     }

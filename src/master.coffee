@@ -115,6 +115,7 @@ calc = (datas)-> (next)->
       space.set(section, 0)
       section_matched = Signal.fft_smart_overwrap_correlation(space, matched)
       section_matched = section_matched.subarray(0, section.length)
+      section_matched.forEach (_, i)-> section_matched[i] = section_matched[i]*section_matched[i]
       __frame.view section_matched, "section * matched"
       __frame.text [val, idx] = Signal.Statictics.findMax(section_matched)
       range = MULTIPASS_DISTANCE/SOUND_OF_SPEED*sampleRate|0
@@ -132,7 +133,7 @@ calc = (datas)-> (next)->
       __frame.view low_section_matched_range, "section * matched, lowpass#{cutoff}"
       vari = Signal.Statictics.variance(low_section_matched_range)
       ave = Signal.Statictics.average(low_section_matched_range)
-      threshold = 80
+      threshold = 78
       stdscore_section_matched_range = low_section_matched_range.map (x)-> 10 * (x - ave) / vari + RULED_LINE_INTERVAL
       flag = true
       while flag
@@ -283,7 +284,7 @@ _craetePictureFrame = (description, target) ->
   legend.appendChild(document.createTextNode(description))
   fieldset.appendChild(legend)
   fieldset.style.display = 'inline-block'
-  fieldset.style.backgroundColor = "#D2E0E6"
+  fieldset.style.backgroundColor = "white"
   target.appendChild fieldset if target?
   return {
     element: fieldset
