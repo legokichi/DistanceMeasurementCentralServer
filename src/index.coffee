@@ -1,3 +1,5 @@
+
+
 # setup
 window.navigator["getUserMedia"] = window.navigator.webkitGetUserMedia ||
                                    window.navigator.mozGetUserMedia    ||
@@ -17,24 +19,25 @@ socket.on "disconnect",        console.info.bind(console, "disconnect")
 socket.on "error",             console.info.bind(console, "error")
 socket.on "echo",              console.info.bind(console, "echo")
 socket.on "connect",        -> socket.emit("echo", "hello")
+
+# util
+this.view = (arr,w=arr.length,h=128)->
+  _view = new SignalViewer(w, h)
+  _view.draw arr
+  document.body.appendChild(_view.cnv)
+n = (a)-> a.split("").map(Number)
+
+# global var
 actx = new AudioContext()
 osc = new OSC(actx)
-processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1)
-recbuf = new RecordBuffer(actx.sampleRate, processor.bufferSize, processor.channelCount)
+
+
+# pn
+pn = new Float32Array(Signal.mseqGen(11, n("01001001001")))
+tse = new TimeSpreadEcho(actx, kernel)
+tse.processor.connect(actx.destination)
+
 osc.createAudioBufferFromURL("TellYourWorld1min.mp3").then (abuf)->
-  console.log abuf
-  console.log anode = osc.createAudioNodeFromAudioBuffer(abuf);
-  anode.connect(processor)
-  processor.connect(this.actx.destination)
-  processor.addEventListener "audioprocess", handler=(ev)->
-    buf = ev.inputBuffer.getChannelData(0)
-    ev.outputBuffer.getChannelData(0).set(buf, 0)
-    recbuf.add([new Float32Array(buf)], actx.currentTime)
-    console.log "rec.", recbuf.count*recbuf.bufferSize/actx.sampleRate, abuf.duration
-    if(recbuf.count*recbuf.bufferSize/actx.sampleRate > abuf.duration)
-      console.log "fin."
-      processor.removeEventListener("audioprocess", handler)
-      processor.disconnect()
-      console.log rawdata = recbuf.merge()
-      recbuf.clear()
-  anode.start(this.actx.currentTime)
+  anode = osc.createAudioNodeFromAudioBuffer(abuf)
+  anode.connect(tse.processor)
+  anode.start(actx.currentTime)

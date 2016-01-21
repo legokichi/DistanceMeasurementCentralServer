@@ -145,57 +145,9 @@
     return Promise.all(prms);
   };
 
-<<<<<<< HEAD
-io.on('connection', function(socket) {
-  console.info("connection", socket.client.id);
-  socket.on('echo', function(data) {
-    return socket.emit("echo", data);
-  });
-  socket.on('event', console.info.bind(console, "event"));
-  socket.on('disconnect', console.info.bind(console, "disconnect"));
-  return socket.on('start', start);
-});
-
-server.listen(8000);
-
-start = function() {
-  var n;
-  n = function(a) {
-    return a.split("").map(Number);
-  };
-  return Promise.resolve().then(function() {
-    return requestParallel("ready", io.sockets.sockets.reduce((function(o, socket, i) {
-      o[socket.id] = [
-        {
-          length: 11,
-          seedA: n("01000000001"),
-          seedB: n("00011001111"),
-          shift: i,
-          carrier_freq: 10000
-        }, {
-          length: 11,
-          seedA: n("01001001001"),
-          seedB: n("10101010101"),
-          shift: i,
-          carrier_freq: 6000
-        }
-      ];
-      return o;
-    }), {}));
-  }).then(function() {
-    return log("sockets", io.sockets.sockets.map(function(socket) {
-      return socket.id;
-    }));
-  }).then(function() {
-    return requestParallel("startRec");
-  }).then(function() {
-    var a, prms;
-    prms = io.sockets.sockets.map(function(socket) {
-=======
   requestLinear = function(eventName) {
     var prms;
     prms = io.of('/node').sockets.map(function(socket) {
->>>>>>> slide
       return function() {
         return request(socket, eventName, data);
       };
