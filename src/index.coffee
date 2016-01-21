@@ -1,3 +1,8 @@
+# setup
+window.navigator["getUserMedia"] = window.navigator.webkitGetUserMedia ||
+                                   window.navigator.mozGetUserMedia    ||
+                                   window.navigator.getUserMedia
+
 # color state
 changeColor = ->
   document.body.style.backgroundColor = location.hash.slice(1)
@@ -18,7 +23,7 @@ socket.on "reconnect_failed",  console.info.bind(console, "reconnect_failed")
 socket.on "disconnect",        console.info.bind(console, "disconnect")
 socket.on "error",             console.info.bind(console, "error")
 socket.on "echo",              console.info.bind(console, "echo")
-socket.on "connect",        -> socket.emit("echo", socket.id); socket.emit("colors")
+socket.on "connect",        -> socket.emit("colors")
 
 # error logger
 window.onerror = (err)->
@@ -35,16 +40,86 @@ actx = new AudioContext()
 osc = new OSC(actx)
 gain = actx.createGain()
 gain.connect(actx.destination)
+processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1); # between Math.pow(2,8) and Math.pow(2,14).
+# need initialize
+recbuf = null
+isRecording = false
+pulseStartTime = {}
+pulseStopTime  = {}
+DSSS_SPEC = null
+__nextTick__ = null
+
 
 # main
 main = ->
-  socket.on "color", (data)-> socket.emit("color", [socket.id, location.hash.slice(1)])
-  socket.on "play", (data)-> play(data)
-  socket.on "volume", (data)->
-    gain.gain.value = data[socket.id]
+  socket.on "color",      (a)->                  socket.emit("color", {id: socket.id, color: location.hash.slice(1)})
+  socket.on "ready",      (a)-> ready(a)      -> socket.emit("ready")
+  socket.on "startRec",      -> startRec      -> socket.emit("startRec")
+  socket.on "startPulse", (a)-> startPulse(a) -> socket.emit("startPulse")
+  socket.on "beepPulse",     -> beepPulse     -> socket.emit("beepPulse")
+  socket.on "stopPulse",  (a)-> stopPulse(a)  -> socket.emit("stopPulse")
+  socket.on "stopRec",       -> stopRec       -> socket.emit("stopRec")
+  socket.on "sendRec",       -> sendRec    (a)-> socket.emit("sendRec", a)
+  socket.on "play",       (a)-> play(a)
+  socket.on "volume",     (a)-> gain.gain.value = a[socket.id]
 
 
 # where
+n = (a)-> a.split("").map(Number)
+ready      = ({length, seed, carrier_freq})-> (next)->
+  document.body.style.backgroundColor = location.hash.slice(1)
+  recbuf = new RecordBuffer(actx.sampleRate, processor.bufferSize, processor.channelCount)
+  isRecording    = false
+  pulseStartTime = {}
+  pulseStopTime  = {}
+  DSSS_SPEC = null
+  __nextTick__ = null
+  ss_code = Signal.mseqGen(length, seed) # {1,-1}
+  matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
+  ss_sig = matched#Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, matched.length*PULSE_N) # modulated
+  abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
+  DSSS_SPEC = {abuf, length, seed, carrier_freq}
+  next()
+
+startRec   = (next)-> isRecording = true; __nextTick__ = -> __nextTick__ = null; next()
+startPulse = (id)-> (next)-> pulseStartTime[id] = actx.currentTime; next()
+beepPulse  = (next)->
+  {abuf} = DSSS_SPEC
+  startTime = actx.currentTime
+  anode = osc.createAudioNodeFromAudioBuffer(abuf)
+  anode.connect(actx.destination)
+  anode.start(startTime)
+  do recur = ->
+    if (startTime + abuf.duration) < actx.currentTime
+    then setTimeout(next, 100)
+    else setTimeout(recur, 100)
+stopPulse  = (id)-> (next)-> __nextTick__ = -> pulseStopTime[id] = actx.currentTime; __nextTick__ = null; next()
+stopRec    = (next) -> isRecording = false; next()
+sendRec    = (next)->
+  f32arr = recbuf.merge()
+  recStartTime = recbuf.sampleTimes[0] - (recbuf.bufferSize / recbuf.sampleRate)
+  recStopTime = recbuf.sampleTimes[recbuf.sampleTimes.length-1]
+  startStops = Object.keys(pulseStartTime).map (id)->
+    startPtr = (pulseStartTime[id] - recStartTime) * recbuf.sampleRate|0
+    stopPtr = (pulseStopTime[id] - recStartTime) * recbuf.sampleRate|0
+    {id, startPtr, stopPtr}
+  o =
+    id: socket.id
+    recStartTime: recStartTime
+    recStopTime: recStopTime
+    alias: location.hash.slice(1)
+    startStops: startStops
+    pulseStartTime: pulseStartTime
+    pulseStopTime: pulseStopTime
+    sampleTimes: recbuf.sampleTimes
+    sampleRate: actx.sampleRate
+    bufferSize: processor.bufferSize
+    channelCount: processor.channelCount
+    recF32arr: f32arr.buffer
+    DSSS_SPEC: DSSS_SPEC
+    currentTime: actx.currentTime
+  recbuf.clear()
+  next(o)
 play = (data)->
   {wait, pulseTimes, delayTimes, id, currentTimes, recStartTimes, now, now2} = data
   # pulseTimes[socket.id][id] 自分がidの音を聞いた時刻
@@ -61,4 +136,17 @@ play = (data)->
     node.connect(gain)
 
 
-window.addEventListener "DOMContentLoaded", ->  main()
+_prepareRec = (next)->
+  left  = (err)-> throw err
+  right = (stream)->
+    source = actx.createMediaStreamSource(stream)
+    source.connect(processor)
+    processor.connect(actx.destination)
+    processor.addEventListener "audioprocess", (ev)->
+      if isRecording
+        recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], actx.currentTime)
+      __nextTick__() if __nextTick__?
+    next()
+  navigator.getUserMedia({video: false, audio: true}, right, left)
+
+window.addEventListener "DOMContentLoaded", -> _prepareRec -> main()
