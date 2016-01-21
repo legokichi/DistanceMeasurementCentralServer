@@ -39,7 +39,7 @@ main = ->
     TIME_DATA.now2 = Date.now()
     console.log "TIME_DATA", TIME_DATA
     socket.emit("play", TIME_DATA)
-  -> $("#play").click ->
+  $("#status").click ->
     wait = 0
     distances = points.reduce(((o, [x, y, color1, id1], i)->
       o[id1] = points.reduce(((o, [_x, _y, color2, id2], j)->
@@ -89,8 +89,6 @@ main = ->
     console.info("delayTimesAliased");    console.table(delayTimesAliased)
     console.info("distancesAliased");     console.table(distancesAliased)
 
-    TIME_DATA = {wait, pulseTimes, delayTimes, id, currentTimes, recStartTimes, now, now2, volumes}
-    socket.emit("play", TIME_DATA)
 
 
 calc = (datas)-> (next)->

@@ -74,142 +74,128 @@
       console.log("TIME_DATA", TIME_DATA);
       return socket.emit("play", TIME_DATA);
     });
-    return function() {
-      return $("#play").click(function() {
-        var R, _volumes, a, aliases, currentTimes, delayTimes, delayTimesAliased, distances, distancesAliased, distancesVS, id, k, now, now2, pulseTimes, pulseTimesAliased, recStartTimes, sum, volumes, wait;
-        wait = 0;
-        distances = points.reduce((function(o, arg, i) {
-          var color1, id1, x, y;
-          x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
-          o[id1] = points.reduce((function(o, arg1, j) {
-            var _x, _y, color2, id2;
-            _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
-            o[id2] = Math.sqrt(Math.pow(x - _x, 2) + Math.pow(y - _y, 2));
-            return o;
-          }), {});
+    return $("#status").click(function() {
+      var R, _volumes, a, aliases, currentTimes, delayTimes, delayTimesAliased, distances, distancesAliased, distancesVS, id, k, now, now2, pulseTimes, pulseTimesAliased, recStartTimes, sum, volumes, wait;
+      wait = 0;
+      distances = points.reduce((function(o, arg, i) {
+        var color1, id1, x, y;
+        x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
+        o[id1] = points.reduce((function(o, arg1, j) {
+          var _x, _y, color2, id2;
+          _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
+          o[id2] = Math.sqrt(Math.pow(x - _x, 2) + Math.pow(y - _y, 2));
           return o;
         }), {});
-        delayTimes = points.reduce((function(o, arg, i) {
-          var color1, id1, x, y;
-          x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
-          o[id1] = points.reduce((function(o, arg1, j) {
-            var _x, _y, color2, id2;
-            _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
-            o[id2] = distances[id1][id2] * 2 / SOUND_OF_SPEED;
-            return o;
-          }), {});
+        return o;
+      }), {});
+      delayTimes = points.reduce((function(o, arg, i) {
+        var color1, id1, x, y;
+        x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
+        o[id1] = points.reduce((function(o, arg1, j) {
+          var _x, _y, color2, id2;
+          _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
+          o[id2] = distances[id1][id2] * 2 / SOUND_OF_SPEED;
           return o;
         }), {});
-        pulseTimes = points.reduce((function(o, arg, i) {
-          var color1, id1, x, y;
-          x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
-          o[id1] = points.reduce((function(o, arg1, j) {
-            var _x, _y, color2, id2;
-            _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
-            if (i === j) {
-              o[id2] = 0;
-            } else {
-              o[id2] = 1;
-            }
-            return o;
-          }), {});
+        return o;
+      }), {});
+      pulseTimes = points.reduce((function(o, arg, i) {
+        var color1, id1, x, y;
+        x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
+        o[id1] = points.reduce((function(o, arg1, j) {
+          var _x, _y, color2, id2;
+          _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
+          if (i === j) {
+            o[id2] = 0;
+          } else {
+            o[id2] = 1;
+          }
           return o;
         }), {});
-        recStartTimes = points.reduce((function(o, arg, i) {
-          var color1, id1, x, y;
-          x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
-          o[id1] = 0;
-          return o;
-        }), {});
-        currentTimes = points.reduce((function(o, arg, i) {
-          var color1, id1, x, y;
-          x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
-          o[id1] = 2;
-          return o;
-        }), {});
-        distancesVS = points.map(function(point) {
-          var _x, _y, x, y;
-          x = point[0], y = point[1];
-          _x = VS[0], _y = VS[1];
-          return Math.sqrt(Math.pow(x - _x, 2) + Math.pow(y - _y, 2));
-        });
-        R = 6;
-        a = R / (20 * Math.log10(2));
-        sum = distancesVS.reduce((function(a, d) {
-          return a + 1 / Math.pow(d, 2 * a);
-        }), 0);
-        k = 1 / Math.sqrt(sum);
-        _volumes = distancesVS.map(function(d) {
-          return k / Math.pow(d, a);
-        });
-        volumes = points.reduce((function(o, arg, i) {
-          var color1, id1, x, y;
-          x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
-          o[id1] = _volumes[i];
-          return o;
-        }), {});
-        now = Date.now();
-        now2 = Date.now();
-        id = points[0][3];
-        aliases = points.reduce((function(o, arg) {
-          var color1, id1, x, y;
-          x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
-          o[id1] = color1;
-          return o;
-        }), {});
-        distancesAliased = points.reduce((function(o, arg, i) {
-          var color1, id1, x, y;
-          x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
-          o[aliases[id1]] = points.reduce((function(o, arg1, j) {
-            var _x, _y, color2, id2;
-            _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
-            o[aliases[id2]] = distances[id1][id2];
-            return o;
-          }), {});
-          return o;
-        }), {});
-        delayTimesAliased = points.reduce((function(o, arg, i) {
-          var color1, id1, x, y;
-          x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
-          o[aliases[id1]] = points.reduce((function(o, arg1, j) {
-            var _x, _y, color2, id2;
-            _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
-            o[aliases[id2]] = delayTimes[id1][id2];
-            return o;
-          }), {});
-          return o;
-        }), {});
-        pulseTimesAliased = points.reduce((function(o, arg, i) {
-          var color1, id1, x, y;
-          x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
-          o[aliases[id1]] = points.reduce((function(o, arg1, j) {
-            var _x, _y, color2, id2;
-            _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
-            o[aliases[id2]] = pulseTimes[id1][id2];
-            return o;
-          }), {});
-          return o;
-        }), {});
-        console.info("pulseTimesAliased");
-        console.table(pulseTimesAliased);
-        console.info("delayTimesAliased");
-        console.table(delayTimesAliased);
-        console.info("distancesAliased");
-        console.table(distancesAliased);
-        TIME_DATA = {
-          wait: wait,
-          pulseTimes: pulseTimes,
-          delayTimes: delayTimes,
-          id: id,
-          currentTimes: currentTimes,
-          recStartTimes: recStartTimes,
-          now: now,
-          now2: now2,
-          volumes: volumes
-        };
-        return socket.emit("play", TIME_DATA);
+        return o;
+      }), {});
+      recStartTimes = points.reduce((function(o, arg, i) {
+        var color1, id1, x, y;
+        x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
+        o[id1] = 0;
+        return o;
+      }), {});
+      currentTimes = points.reduce((function(o, arg, i) {
+        var color1, id1, x, y;
+        x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
+        o[id1] = 2;
+        return o;
+      }), {});
+      distancesVS = points.map(function(point) {
+        var _x, _y, x, y;
+        x = point[0], y = point[1];
+        _x = VS[0], _y = VS[1];
+        return Math.sqrt(Math.pow(x - _x, 2) + Math.pow(y - _y, 2));
       });
-    };
+      R = 6;
+      a = R / (20 * Math.log10(2));
+      sum = distancesVS.reduce((function(a, d) {
+        return a + 1 / Math.pow(d, 2 * a);
+      }), 0);
+      k = 1 / Math.sqrt(sum);
+      _volumes = distancesVS.map(function(d) {
+        return k / Math.pow(d, a);
+      });
+      volumes = points.reduce((function(o, arg, i) {
+        var color1, id1, x, y;
+        x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
+        o[id1] = _volumes[i];
+        return o;
+      }), {});
+      now = Date.now();
+      now2 = Date.now();
+      id = points[0][3];
+      aliases = points.reduce((function(o, arg) {
+        var color1, id1, x, y;
+        x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
+        o[id1] = color1;
+        return o;
+      }), {});
+      distancesAliased = points.reduce((function(o, arg, i) {
+        var color1, id1, x, y;
+        x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
+        o[aliases[id1]] = points.reduce((function(o, arg1, j) {
+          var _x, _y, color2, id2;
+          _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
+          o[aliases[id2]] = distances[id1][id2];
+          return o;
+        }), {});
+        return o;
+      }), {});
+      delayTimesAliased = points.reduce((function(o, arg, i) {
+        var color1, id1, x, y;
+        x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
+        o[aliases[id1]] = points.reduce((function(o, arg1, j) {
+          var _x, _y, color2, id2;
+          _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
+          o[aliases[id2]] = delayTimes[id1][id2];
+          return o;
+        }), {});
+        return o;
+      }), {});
+      pulseTimesAliased = points.reduce((function(o, arg, i) {
+        var color1, id1, x, y;
+        x = arg[0], y = arg[1], color1 = arg[2], id1 = arg[3];
+        o[aliases[id1]] = points.reduce((function(o, arg1, j) {
+          var _x, _y, color2, id2;
+          _x = arg1[0], _y = arg1[1], color2 = arg1[2], id2 = arg1[3];
+          o[aliases[id2]] = pulseTimes[id1][id2];
+          return o;
+        }), {});
+        return o;
+      }), {});
+      console.info("pulseTimesAliased");
+      console.table(pulseTimesAliased);
+      console.info("delayTimesAliased");
+      console.table(delayTimesAliased);
+      console.info("distancesAliased");
+      return console.table(distancesAliased);
+    });
   };
 
   calc = function(datas) {
