@@ -109,88 +109,69 @@ calc = (datas)-> (next)->
       console.log _id, startPtr, stopPtr
       __frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"; _frame.add __frame.element
       rawdata = section = recF32arr.subarray(startPtr, stopPtr)
+      correlA = Signal.fft_smart_overwrap_correlation(rawdata, matchedA)
+      correlB = Signal.fft_smart_overwrap_correlation(rawdata, matchedB)
       __frame.view section, "section"
-      __frame.view correlA = Signal.fft_smart_overwrap_correlation(rawdata, matchedA)
-      __frame.view correlB = Signal.fft_smart_overwrap_correlation(rawdata, matchedB)
-      [maxA, idxA] = Signal.Statictics.findMax(correlA)
-      [maxB, idxB] = Signal.Statictics.findMax(correlB)
-      console.log idxB, relB = idxA+matchedA.length*2
-      console.log idxA, relA = idxB-matchedA.length*2
-      if correlB[relB] + maxA > correlA[relA] + maxB
-        # Aが正しいのでAを修正
-        idxB = relB
-        maxB = correlB[idxB]
-      else
+      __frame.view correlA, "correlA"
+      __frame.view correlB, "correlB"
+      [_, idxA] = Signal.Statictics.findMax(correlA)
+      [_, idxB] = Signal.Statictics.findMax(correlB)
+      relB = idxA+matchedA.length*2 # Bの位置とAから見たBの位置
+      relA = idxB-matchedA.length*2 # Aの位置とBから見たAの位置
+      stdscoreA = do ->
+        ave = Signal.Statictics.average(correlA)
+        vari = Signal.Statictics.variance(correlA)
+        (x)-> 10 * (x - ave) / vari + 50
+      stdscoreB = do ->
+        ave = Signal.Statictics.average(correlB)
+        vari = Signal.Statictics.variance(correlB)
+        (x)-> 10 * (x - ave) / vari + 50
+      scoreB = stdscoreB(correlB[idxB]) + stdscoreA(correlA[relA])
+      scoreA = stdscoreA(correlA[idxA]) + stdscoreB(correlB[relB]) # Aの値とAから見たBの位置の値
+      range = (MULTIPASS_DISTANCE/SOUND_OF_SPEED*sampleRate)|0
+      if relA > 0 && scoreB > scoreA
         # Bが正しいのでAを修正
-        idxA = relA
-        maxA = correlA[idxA]
+        [_, idx] = Signal.Statictics.findMax(correlA.subarray(relA-range, relA+range))
+        idxA = relA - range + idx
+      else
+        # Aが正しいのでBを修正
+        [_, idx] = Signal.Statictics.findMax(correlB.subarray(relB-range, relB+range))
+        idxB = relB - range + idx
       marker = new Uint8Array(correlA.length)
       marker[idxA] = 255
       marker[idxB] = 255
-      __frame.view marker
-      range = 5/340*sampleRate|0
-      __frame.view zoomA = correlA.subarray(idxA-range, idxA+range)
-      __frame.view zoomB = correlB.subarray(idxB-range, idxB+range)
+      __frame.view marker,"marker"
+      zoomA = correlA.subarray(idxA-range, idxA+range)
+      zoomB = correlB.subarray(idxB-range, idxB+range)
+      correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB)
+      __frame.view zoomA,"zoomA"
+      __frame.view zoomB,"zoomB"
+      __frame.view correl,"correl"
+      [max, idx] = Signal.Statictics.findMax(correl)
       i = 0
       idxs = new Uint16Array(zoomB.length)
       maxs = new Float32Array(zoomB.length)
-      prevIdx = 0
+      prevIdx = idx
       searchRange = 128
-      do recur = ->
-        if i > zoomB.length
-          __frame.view  idxs
-          __frame.view  maxs
-          return
-        __frame.view correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB.subarray(i, zoomB.length))
-        begin = if i - searchRange < 0 then 0 else i - searchRange
-        [max, idx] = Signal.Statictics.findMax(correl.subarray(begin, i + searchRange))
+      while i < zoomB.length*3/4
+        zoomB = correlB.subarray(i+idxB-range, i+idxB+range)
+        correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB)
+        begin = prevIdx - searchRange; if begin < 0 then 0 else begin
+        [max, idx] = Signal.Statictics.findMax(correl.subarray(begin, prevIdx + searchRange))
         idxs[i] = begin + idx
         maxs[i] = max
+        prevIdx = begin + idx
         i += 10
-        setTimeout recur
-      return
-      ###
-      space = new Float32Array(section.length*2)
-      space.set(section, 0)
-      section_matched = Signal.fft_smart_overwrap_correlation(space, matched)
-      section_matched = section_matched.subarray(0, section.length)
-      section_matched.forEach (_, i)-> section_matched[i] = section_matched[i]*section_matched[i]
-      __frame.view section_matched, "section * matched"
-      __frame.text [val, idx] = Signal.Statictics.findMax(section_matched)
-      range = MULTIPASS_DISTANCE/SOUND_OF_SPEED*sampleRate|0
-      begin = idx-range; if begin < 0 then begin = 0
-      end   = idx+range
-      marker = new Uint8Array(section_matched.length)
-      marker[begin] = marker[end] = 255
-      __frame.view marker, "marker"
-      section_matched_range = section_matched.subarray(begin, end)
-      __frame.view section_matched_range, "section * matched, range#{MULTIPASS_DISTANCE}"
-      mse_section_matched_range = section_matched_range.map (a)-> a*a # 二乗
-      __frame.view mse_section_matched_range, "section * matched, square"
-      cutoff = 1000
-      low_section_matched_range = Signal.lowpass(mse_section_matched_range, sampleRate, cutoff, 1) # low-pass
-      __frame.view low_section_matched_range, "section * matched, lowpass#{cutoff}"
-      vari = Signal.Statictics.variance(low_section_matched_range)
-      ave = Signal.Statictics.average(low_section_matched_range)
-      threshold = 78
-      stdscore_section_matched_range = low_section_matched_range.map (x)-> 10 * (x - ave) / vari + RULED_LINE_INTERVAL
-      flag = true
-      while flag
-        for v, offset in stdscore_section_matched_range
-          if threshold < stdscore_section_matched_range[offset]
-            flag = false
-            break
-        threshold -= 1
-      marker = new Uint8Array(low_section_matched_range.length)
-      marker[offset] = 255
-      __frame.view marker, "offset#{offset}"
-      max_offset = begin + offset
+      __frame.view idxs,"idxs"
+      __frame.view maxs,"maxs"
+      [_, idx] = Signal.Statictics.findMax(maxs)
+      marker = new Uint8Array(zoomB.length)
+      marker[idx] = 255
+      __frame.view marker,"marker"
+      max_offset = idx + idxB - range
       pulseTime = (startPtr + max_offset) / sampleRate
       {id: _id, max_offset, pulseTime}
-      ###
-      {id: "", max_offset:0, pulseTime:0}
     {id, alias, results: _results}
-  return
   sampleRates = datas.reduce(((o, {id, sampleRate})-> o[id] = sampleRate; o), {})
   recStartTimes = datas.reduce(((o, {id, recStartTime})-> o[id] = recStartTime; o), {})
   currentTimes = datas.reduce(((o, {id, currentTime})-> o[id] = currentTime; o), {})
@@ -340,9 +321,9 @@ _craetePictureFrame = (description, target) ->
     view: (arr, title)->
       __frame = _craetePictureFrame title + "(#{arr.length})"
       width = if VIEW_SIZE < arr.length then VIEW_SIZE else arr.length
-      render = new Signal.Render(width, 64)
-      Signal.Render::drawSignal.apply(render, [arr, true, true])
-      __frame.add render.element
+      render = new SignalViewer(width, 64)
+      render.draw(arr)
+      __frame.add render.cnv
       @add __frame.element
       @add document.createElement "br"
     text: (title)->
