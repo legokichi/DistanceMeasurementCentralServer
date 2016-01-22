@@ -78,8 +78,9 @@
     return Promise.resolve().then(function() {
       return requestParallel("ready", {
         length: 12,
-        seed: n("111000011001"),
-        carrier_freq: 2000
+        seedA: n("101101010111"),
+        seedB: n("011110111111"),
+        carrier_freq: 4410 / 2
       });
     }).then(function() {
       return log("sockets", io.of('/node').sockets.map(function(socket) {

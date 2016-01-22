@@ -213,77 +213,110 @@
         return o;
       }), {});
       results = datas.map(function(arg) {
-        var DSSS_SPEC, _frame, _results, alias, carrier_freq, id, length, matched, recF32arr, sampleRate, seed, ss_code, startStops;
+        var DSSS_SPEC, _frame, _results, alias, carrier_freq, id, length, matchedA, matchedB, mseqA, mseqB, recF32arr, sampleRate, seedA, seedB, startStops;
         id = arg.id, alias = arg.alias, startStops = arg.startStops, recF32arr = arg.recF32arr, DSSS_SPEC = arg.DSSS_SPEC, sampleRate = arg.sampleRate;
-        length = DSSS_SPEC.length, seed = DSSS_SPEC.seed, carrier_freq = DSSS_SPEC.carrier_freq;
+        length = DSSS_SPEC.length, seedA = DSSS_SPEC.seedA, seedB = DSSS_SPEC.seedB, carrier_freq = DSSS_SPEC.carrier_freq;
         _frame = _craetePictureFrame(alias + "@" + id);
         frame.add(_frame.element);
-        ss_code = Signal.mseqGen(length, seed);
-        matched = Signal.BPSK(ss_code, carrier_freq, sampleRate, 0);
+        mseqA = Signal.mseqGen(length, seedA);
+        mseqB = Signal.mseqGen(length, seedB);
+        matchedA = Signal.BPSK(mseqA, carrier_freq, sampleRate, 0);
+        matchedB = Signal.BPSK(mseqB, carrier_freq, sampleRate, 0);
         recF32arr = new Float32Array(recF32arr);
         console.log(recF32arr.length, alias);
         _results = startStops.map(function(arg1) {
-          var T, __frame, _id, ave, begin, cutoff, end, flag, idx, l, len, low_section_matched_range, marker, max_offset, mse_section_matched_range, offset, pulseTime, range, ref, section, section_matched, section_matched_range, space, startPtr, stdscore_section_matched_range, stopPtr, threshold, v, val, vari;
+          var __frame, _id, correlA, correlB, i, idxA, idxB, idxs, marker, maxA, maxB, maxs, prevIdx, range, rawdata, recur, ref, ref1, relA, relB, searchRange, section, startPtr, stopPtr, zoomA, zoomB;
           _id = arg1.id, startPtr = arg1.startPtr, stopPtr = arg1.stopPtr;
           console.log(_id, startPtr, stopPtr);
           __frame = _craetePictureFrame(aliases[id] + "<->" + aliases[_id]);
           _frame.add(__frame.element);
-          T = matched.length;
-          section = recF32arr.subarray(startPtr, stopPtr);
+          rawdata = section = recF32arr.subarray(startPtr, stopPtr);
           __frame.view(section, "section");
-          space = new Float32Array(section.length * 2);
-          space.set(section, 0);
-          section_matched = Signal.fft_smart_overwrap_correlation(space, matched);
-          section_matched = section_matched.subarray(0, section.length);
-          section_matched.forEach(function(_, i) {
-            return section_matched[i] = section_matched[i] * section_matched[i];
-          });
-          __frame.view(section_matched, "section * matched");
-          __frame.text((ref = Signal.Statictics.findMax(section_matched), val = ref[0], idx = ref[1], ref));
-          range = MULTIPASS_DISTANCE / SOUND_OF_SPEED * sampleRate | 0;
-          begin = idx - range;
-          if (begin < 0) {
-            begin = 0;
+          __frame.view(correlA = Signal.fft_smart_overwrap_correlation(rawdata, matchedA));
+          __frame.view(correlB = Signal.fft_smart_overwrap_correlation(rawdata, matchedB));
+          ref = Signal.Statictics.findMax(correlA), maxA = ref[0], idxA = ref[1];
+          ref1 = Signal.Statictics.findMax(correlB), maxB = ref1[0], idxB = ref1[1];
+          console.log(idxB, relB = idxA + matchedA.length * 2);
+          console.log(idxA, relA = idxB - matchedA.length * 2);
+          if (correlB[relB] + maxA > correlA[relA] + maxB) {
+            idxB = relB;
+            maxB = correlB[idxB];
+          } else {
+            idxA = relA;
+            maxA = correlA[idxA];
           }
-          end = idx + range;
-          marker = new Uint8Array(section_matched.length);
-          marker[begin] = marker[end] = 255;
-          __frame.view(marker, "marker");
-          section_matched_range = section_matched.subarray(begin, end);
-          __frame.view(section_matched_range, "section * matched, range" + MULTIPASS_DISTANCE);
-          mse_section_matched_range = section_matched_range.map(function(a) {
-            return a * a;
-          });
-          __frame.view(mse_section_matched_range, "section * matched, square");
-          cutoff = 1000;
-          low_section_matched_range = Signal.lowpass(mse_section_matched_range, sampleRate, cutoff, 1);
-          __frame.view(low_section_matched_range, "section * matched, lowpass" + cutoff);
-          vari = Signal.Statictics.variance(low_section_matched_range);
-          ave = Signal.Statictics.average(low_section_matched_range);
-          threshold = 78;
-          stdscore_section_matched_range = low_section_matched_range.map(function(x) {
-            return 10 * (x - ave) / vari + RULED_LINE_INTERVAL;
-          });
-          flag = true;
-          while (flag) {
-            for (offset = l = 0, len = stdscore_section_matched_range.length; l < len; offset = ++l) {
-              v = stdscore_section_matched_range[offset];
-              if (threshold < stdscore_section_matched_range[offset]) {
-                flag = false;
-                break;
-              }
+          marker = new Uint8Array(correlA.length);
+          marker[idxA] = 255;
+          marker[idxB] = 255;
+          __frame.view(marker);
+          range = 5 / 340 * sampleRate | 0;
+          __frame.view(zoomA = correlA.subarray(idxA - range, idxA + range));
+          __frame.view(zoomB = correlB.subarray(idxB - range, idxB + range));
+          i = 0;
+          idxs = new Uint16Array(zoomB.length);
+          maxs = new Float32Array(zoomB.length);
+          prevIdx = 0;
+          searchRange = 128;
+          (recur = function() {
+            var begin, correl, idx, max, ref2;
+            if (i > zoomB.length) {
+              __frame.view(idxs);
+              __frame.view(maxs);
+              return;
             }
-            threshold -= 1;
-          }
-          marker = new Uint8Array(low_section_matched_range.length);
-          marker[offset] = 255;
-          __frame.view(marker, "offset" + offset);
-          max_offset = begin + offset;
-          pulseTime = (startPtr + max_offset) / sampleRate;
+            __frame.view(correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB.subarray(i, zoomB.length)));
+            begin = i - searchRange < 0 ? 0 : i - searchRange;
+            ref2 = Signal.Statictics.findMax(correl.subarray(begin, i + searchRange)), max = ref2[0], idx = ref2[1];
+            idxs[i] = begin + idx;
+            maxs[i] = max;
+            i += 10;
+            return setTimeout(recur);
+          })();
+          return;
+
+          /*
+          space = new Float32Array(section.length*2)
+          space.set(section, 0)
+          section_matched = Signal.fft_smart_overwrap_correlation(space, matched)
+          section_matched = section_matched.subarray(0, section.length)
+          section_matched.forEach (_, i)-> section_matched[i] = section_matched[i]*section_matched[i]
+          __frame.view section_matched, "section * matched"
+          __frame.text [val, idx] = Signal.Statictics.findMax(section_matched)
+          range = MULTIPASS_DISTANCE/SOUND_OF_SPEED*sampleRate|0
+          begin = idx-range; if begin < 0 then begin = 0
+          end   = idx+range
+          marker = new Uint8Array(section_matched.length)
+          marker[begin] = marker[end] = 255
+          __frame.view marker, "marker"
+          section_matched_range = section_matched.subarray(begin, end)
+          __frame.view section_matched_range, "section * matched, range#{MULTIPASS_DISTANCE}"
+          mse_section_matched_range = section_matched_range.map (a)-> a*a # 二乗
+          __frame.view mse_section_matched_range, "section * matched, square"
+          cutoff = 1000
+          low_section_matched_range = Signal.lowpass(mse_section_matched_range, sampleRate, cutoff, 1) # low-pass
+          __frame.view low_section_matched_range, "section * matched, lowpass#{cutoff}"
+          vari = Signal.Statictics.variance(low_section_matched_range)
+          ave = Signal.Statictics.average(low_section_matched_range)
+          threshold = 78
+          stdscore_section_matched_range = low_section_matched_range.map (x)-> 10 * (x - ave) / vari + RULED_LINE_INTERVAL
+          flag = true
+          while flag
+            for v, offset in stdscore_section_matched_range
+              if threshold < stdscore_section_matched_range[offset]
+                flag = false
+                break
+            threshold -= 1
+          marker = new Uint8Array(low_section_matched_range.length)
+          marker[offset] = 255
+          __frame.view marker, "offset#{offset}"
+          max_offset = begin + offset
+          pulseTime = (startPtr + max_offset) / sampleRate
+          {id: _id, max_offset, pulseTime}
+           */
           return {
-            id: _id,
-            max_offset: max_offset,
-            pulseTime: pulseTime
+            id: "",
+            max_offset: 0,
+            pulseTime: 0
           };
         });
         return {
@@ -292,6 +325,7 @@
           results: _results
         };
       });
+      return;
       sampleRates = datas.reduce((function(o, arg) {
         var id, sampleRate;
         id = arg.id, sampleRate = arg.sampleRate;

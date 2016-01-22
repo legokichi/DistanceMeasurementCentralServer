@@ -97,18 +97,59 @@ calc = (datas)-> (next)->
   frame = _craetePictureFrame "calc", document.body
   aliases = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
   results = datas.map ({id, alias, startStops, recF32arr, DSSS_SPEC, sampleRate})->
-    {length, seed, carrier_freq} = DSSS_SPEC
+    {length, seedA, seedB, carrier_freq} = DSSS_SPEC
     _frame = _craetePictureFrame "#{alias}@#{id}"; frame.add _frame.element
-    ss_code = Signal.mseqGen(length, seed) # {1,-1}
-    matched = Signal.BPSK(ss_code, carrier_freq, sampleRate, 0) # modulated
+    mseqA = Signal.mseqGen(length, seedA)
+    mseqB = Signal.mseqGen(length, seedB)
+    matchedA = Signal.BPSK(mseqA, carrier_freq, sampleRate, 0)
+    matchedB = Signal.BPSK(mseqB, carrier_freq, sampleRate, 0)
     recF32arr = new Float32Array(recF32arr)
     console.log recF32arr.length, alias
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
       console.log _id, startPtr, stopPtr
       __frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"; _frame.add __frame.element
-      T = matched.length
-      section = recF32arr.subarray(startPtr, stopPtr)
+      rawdata = section = recF32arr.subarray(startPtr, stopPtr)
       __frame.view section, "section"
+      __frame.view correlA = Signal.fft_smart_overwrap_correlation(rawdata, matchedA)
+      __frame.view correlB = Signal.fft_smart_overwrap_correlation(rawdata, matchedB)
+      [maxA, idxA] = Signal.Statictics.findMax(correlA)
+      [maxB, idxB] = Signal.Statictics.findMax(correlB)
+      console.log idxB, relB = idxA+matchedA.length*2
+      console.log idxA, relA = idxB-matchedA.length*2
+      if correlB[relB] + maxA > correlA[relA] + maxB
+        # Aが正しいのでAを修正
+        idxB = relB
+        maxB = correlB[idxB]
+      else
+        # Bが正しいのでAを修正
+        idxA = relA
+        maxA = correlA[idxA]
+      marker = new Uint8Array(correlA.length)
+      marker[idxA] = 255
+      marker[idxB] = 255
+      __frame.view marker
+      range = 5/340*sampleRate|0
+      __frame.view zoomA = correlA.subarray(idxA-range, idxA+range)
+      __frame.view zoomB = correlB.subarray(idxB-range, idxB+range)
+      i = 0
+      idxs = new Uint16Array(zoomB.length)
+      maxs = new Float32Array(zoomB.length)
+      prevIdx = 0
+      searchRange = 128
+      do recur = ->
+        if i > zoomB.length
+          __frame.view  idxs
+          __frame.view  maxs
+          return
+        __frame.view correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB.subarray(i, zoomB.length))
+        begin = if i - searchRange < 0 then 0 else i - searchRange
+        [max, idx] = Signal.Statictics.findMax(correl.subarray(begin, i + searchRange))
+        idxs[i] = begin + idx
+        maxs[i] = max
+        i += 10
+        setTimeout recur
+      return
+      ###
       space = new Float32Array(section.length*2)
       space.set(section, 0)
       section_matched = Signal.fft_smart_overwrap_correlation(space, matched)
@@ -146,7 +187,10 @@ calc = (datas)-> (next)->
       max_offset = begin + offset
       pulseTime = (startPtr + max_offset) / sampleRate
       {id: _id, max_offset, pulseTime}
+      ###
+      {id: "", max_offset:0, pulseTime:0}
     {id, alias, results: _results}
+  return
   sampleRates = datas.reduce(((o, {id, sampleRate})-> o[id] = sampleRate; o), {})
   recStartTimes = datas.reduce(((o, {id, recStartTime})-> o[id] = recStartTime; o), {})
   currentTimes = datas.reduce(((o, {id, currentTime})-> o[id] = currentTime; o), {})

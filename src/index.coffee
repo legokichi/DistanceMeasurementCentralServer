@@ -66,7 +66,7 @@ main = ->
 
 # where
 n = (a)-> a.split("").map(Number)
-ready      = ({length, seed, carrier_freq})-> (next)->
+ready      = ({length, seedA, seedB, carrier_freq})-> (next)->
   document.body.style.backgroundColor = location.hash.slice(1)
   recbuf = new RecordBuffer(actx.sampleRate, processor.bufferSize, processor.channelCount)
   isRecording    = false
@@ -74,11 +74,15 @@ ready      = ({length, seed, carrier_freq})-> (next)->
   pulseStopTime  = {}
   DSSS_SPEC = null
   __nextTick__ = null
-  ss_code = Signal.mseqGen(length, seed) # {1,-1}
-  matched = Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0) # modulated
-  ss_sig = matched#Signal.BPSK(ss_code, carrier_freq, actx.sampleRate, 0, matched.length*PULSE_N) # modulated
-  abuf = osc.createAudioBufferFromArrayBuffer(ss_sig, actx.sampleRate)
-  DSSS_SPEC = {abuf, length, seed, carrier_freq}
+  mseqA = Signal.mseqGen(length, seedA)
+  mseqB = Signal.mseqGen(length, seedB)
+  matchedA = Signal.BPSK(mseqA, carrier_freq, actx.sampleRate, 0)
+  matchedB = Signal.BPSK(mseqB, carrier_freq, actx.sampleRate, 0)
+  signal = new Float32Array(matchedA.length*2 + matchedB.length)
+  signal.set(matchedA, 0)
+  signal.set(matchedB, matchedA.length*2)
+  abuf = osc.createAudioBufferFromArrayBuffer(signal, actx.sampleRate)
+  DSSS_SPEC = {abuf, length, seedA, seedB, carrier_freq}
   next()
 
 startRec   = (next)-> isRecording = true; __nextTick__ = -> __nextTick__ = null; next()
