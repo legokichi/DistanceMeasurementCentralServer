@@ -32,7 +32,7 @@
 
   RULED_LINE_INTERVAL = 50;
 
-  MULTIPASS_DISTANCE = 7;
+  MULTIPASS_DISTANCE = 8;
 
   SOUND_OF_SPEED = 340;
 
@@ -225,7 +225,7 @@
         recF32arr = new Float32Array(recF32arr);
         console.log(recF32arr.length, alias);
         _results = startStops.map(function(arg1) {
-          var _, __frame, _id, correl, correlA, correlB, idx, idxA, idxB, marker, max_offset, pulseTime, range, rawdata, ref, ref1, ref2, ref3, ref4, ref5, relA, relB, scoreA, scoreB, section, startPtr, stdscoreA, stdscoreB, stopPtr, zoomA, zoomAB, zoomB;
+          var _, __frame, _id, abs_zoomAB, ave, correl, correlA, correlB, flag, idx, idxA, idxB, l, len, low_zoomAB, marker, max_offset, offset, pulseTime, range, rawdata, ref, ref1, ref2, ref3, ref4, relA, relB, scoreA, scoreB, section, startPtr, stdscoreA, stdscoreB, stdscore_zoomAB, stopPtr, threshold, v, vari, zoomA, zoomAB, zoomB;
           _id = arg1.id, startPtr = arg1.startPtr, stopPtr = arg1.stopPtr;
           console.log(_id, startPtr, stopPtr);
           __frame = _craetePictureFrame(aliases[id] + "<->" + aliases[_id]);
@@ -281,12 +281,31 @@
           });
           __frame.view(zoomA, "zoomA");
           __frame.view(zoomB, "zoomB");
-          __frame.view(zoomAB, "zoomAB");
-          ref5 = Signal.Statictics.findMax(zoomAB), _ = ref5[0], idx = ref5[1];
-          marker = new Uint8Array(zoomB.length);
-          marker[idx] = 255;
+          __frame.view(abs_zoomAB = zoomAB.map(function(a) {
+            return Math.abs(a);
+          }));
+          __frame.view(low_zoomAB = Signal.lowpass(abs_zoomAB, sampleRate, 1000, 1));
+          vari = Signal.Statictics.variance(low_zoomAB);
+          ave = Signal.Statictics.average(low_zoomAB);
+          threshold = 78;
+          __frame.view(stdscore_zoomAB = low_zoomAB.map(function(x) {
+            return 10 * (x - ave) / vari + 50;
+          }));
+          flag = true;
+          while (flag) {
+            for (offset = l = 0, len = stdscore_zoomAB.length; l < len; offset = ++l) {
+              v = stdscore_zoomAB[offset];
+              if (threshold < stdscore_zoomAB[offset]) {
+                flag = false;
+                break;
+              }
+            }
+            threshold -= 1;
+          }
+          marker = new Uint8Array(zoomAB.length);
+          marker[offset] = 255;
           __frame.view(marker, "marker");
-          max_offset = idx + idxA - range;
+          max_offset = offset + idxA - range;
           pulseTime = (startPtr + max_offset) / sampleRate;
           return {
             id: _id,
@@ -452,7 +471,7 @@
             _x = VS[0], _y = VS[1];
             return Math.sqrt(Math.pow(x - _x, 2) + Math.pow(y - _y, 2));
           });
-          R = 6;
+          R = 3;
           a = R / (20 * Math.log10(2));
           sum = distancesVS.reduce((function(a, d) {
             return a + 1 / Math.pow(d, 2 * a);

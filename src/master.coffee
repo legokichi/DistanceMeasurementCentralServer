@@ -16,7 +16,7 @@ socket.on "connect",        -> socket.emit("colors")
 WIDTH = 400
 HEIGHT = 400
 RULED_LINE_INTERVAL = 50
-MULTIPASS_DISTANCE = 7
+MULTIPASS_DISTANCE = 8
 SOUND_OF_SPEED = 340
 VIEW_SIZE = Math.pow(2, 12)
 TIME_DATA = null
@@ -150,13 +150,23 @@ calc = (datas)-> (next)->
       zoomAB = zoomA.map (_,i)-> zoomA[i] + zoomB[i] # 加算
       __frame.view zoomA,"zoomA"
       __frame.view zoomB,"zoomB"
-      __frame.view zoomAB,"zoomAB"
-
-      [_, idx] = Signal.Statictics.findMax(zoomAB)
-      marker = new Uint8Array(zoomB.length)
-      marker[idx] = 255
+      __frame.view abs_zoomAB = zoomAB.map (a)-> Math.abs(a)
+      __frame.view low_zoomAB = Signal.lowpass(abs_zoomAB, sampleRate, 1000, 1)
+      vari = Signal.Statictics.variance(low_zoomAB)
+      ave = Signal.Statictics.average(low_zoomAB)
+      threshold = 78
+      __frame.view stdscore_zoomAB = low_zoomAB.map (x)-> 10 * (x - ave) / vari + 50
+      flag = true
+      while flag
+        for v, offset in stdscore_zoomAB
+          if threshold < stdscore_zoomAB[offset]
+            flag = false
+            break
+        threshold -= 1
+      marker = new Uint8Array(zoomAB.length)
+      marker[offset] = 255
       __frame.view marker,"marker"
-      max_offset = idx + idxA - range
+      max_offset = offset + idxA - range
       pulseTime = (startPtr + max_offset) / sampleRate
       {id: _id, max_offset, pulseTime}
     {id, alias, results: _results}
@@ -243,7 +253,7 @@ _processing = (next)->
           [x, y] = point
           [_x, _y] = VS
           Math.sqrt(Math.pow(x - _x, 2) + Math.pow(y - _y, 2))
-        R = 6
+        R = 3
         a = R/(20*Math.log10(2))
         sum = distancesVS.reduce(((a, d)-> a+1/Math.pow(d, 2 * a)), 0)
         k = 1/ Math.sqrt(sum)
