@@ -100,7 +100,6 @@ processor.addEventListener "audioprocess", (ev)->
 
 
 
-
 left  = (err)-> throw err
 right = (stream)->
   source = actx.createMediaStreamSource(stream)
