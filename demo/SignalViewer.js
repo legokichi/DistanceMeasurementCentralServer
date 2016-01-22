@@ -50,13 +50,14 @@
       ref1 = Signal.Statictics.findMin(arr), min = ref1[0], _ = ref1[1];
       if (this.drawAuto) {
         this.zoomX = this.cnv.width / arr.length;
-        this.zoomY = this.cnv.height / (max - min);
-        this.offsetY = -min;
+        this.zoomY = this.cnv.height / (max - min + 0.0000001);
+        this.offsetY = -min * this.zoomY;
       }
+      console.log(this.zoomY, this.offsetY);
       if (this.drawZero) {
         this.ctx.beginPath();
-        this.ctx.moveTo(0, this.cnv.height - this.zoomY * (0 + this.offsetY));
-        this.ctx.lineTo(this.cnv.width, this.cnv.height - this.zoomY * (0 + this.offsetY));
+        this.ctx.moveTo(0, this.cnv.height - (this.zoomY * 0 + this.offsetY));
+        this.ctx.lineTo(this.cnv.width, this.cnv.height - (this.zoomY * 0 + this.offsetY));
         this.ctx.stroke();
         this.ctx.beginPath();
         this.ctx.moveTo(this.offsetX, this.cnv.height - 0);
@@ -64,10 +65,10 @@
         this.ctx.stroke();
       }
       this.ctx.beginPath();
-      this.ctx.moveTo(this.zoomX * (0 + this.offsetX), this.cnv.height - this.zoomY * (arr[0] + this.offsetY));
+      this.ctx.moveTo(this.zoomX * (0 + this.offsetX), this.cnv.height - (this.zoomY * arr[0] + this.offsetY));
       i = 0;
       while (i++ < arr.length) {
-        this.ctx.lineTo(this.zoomX * (i + this.offsetX), this.cnv.height - this.zoomY * (arr[i] + this.offsetY));
+        this.ctx.lineTo(this.zoomX * (i + this.offsetX), this.cnv.height - (this.zoomY * arr[i] + this.offsetY));
       }
       this.ctx.stroke();
       if (this.drawStatus) {

@@ -27,22 +27,23 @@ class this.SignalViewer
     [min, _] = Signal.Statictics.findMin(arr)
     if @drawAuto
       @zoomX = @cnv.width / arr.length
-      @zoomY = @cnv.height / (max - min)
-      @offsetY = -min
+      @zoomY = @cnv.height / (max - min + 0.0000001)
+      @offsetY = -min*@zoomY
+    console.log @zoomY, @offsetY
     if @drawZero
       @ctx.beginPath()
-      @ctx.moveTo(0,          @cnv.height - @zoomY * (0 + @offsetY))
-      @ctx.lineTo(@cnv.width, @cnv.height - @zoomY * (0 + @offsetY))
+      @ctx.moveTo(0,          @cnv.height - (@zoomY * 0 + @offsetY))
+      @ctx.lineTo(@cnv.width, @cnv.height - (@zoomY * 0 + @offsetY))
       @ctx.stroke()
       @ctx.beginPath()
       @ctx.moveTo(@offsetX, @cnv.height - 0)
       @ctx.lineTo(@offsetX, @cnv.height - @cnv.height)
       @ctx.stroke()
     @ctx.beginPath()
-    @ctx.moveTo(@zoomX * (0 + @offsetX), @cnv.height - @zoomY * (arr[0] + @offsetY))
+    @ctx.moveTo(@zoomX * (0 + @offsetX), @cnv.height - (@zoomY * arr[0] + @offsetY))
     i = 0
     while i++<arr.length
-      @ctx.lineTo(@zoomX * (i + @offsetX), @cnv.height - @zoomY * (arr[i] + @offsetY))
+      @ctx.lineTo(@zoomX * (i + @offsetX), @cnv.height - (@zoomY * arr[i] + @offsetY))
     @ctx.stroke()
     if @drawStatus
       @text("min:"+min, 5, 15)

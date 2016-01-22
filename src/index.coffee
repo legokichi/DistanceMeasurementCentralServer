@@ -23,6 +23,8 @@ socket.on "connect",        -> socket.emit("echo", "hello")
 # util
 this.view = (arr,w=arr.length,h=128)->
   _view = new SignalViewer(w, h)
+  #_view.drawAuto = false
+  _view.zoomY = 30
   _view.draw arr
   document.body.appendChild(_view.cnv)
 n = (a)-> a.split("").map(Number)
@@ -30,31 +32,42 @@ n = (a)-> a.split("").map(Number)
 # global var
 actx = new AudioContext()
 osc = new OSC(actx)
-output_processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1)
-output_processor.connect(actx.destination)
 input_processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1)
 input_processor.connect(actx.destination)
-pn = new Float32Array(Signal.mseqGen(14, n("11000000000101")))
-tse = new TimeSpreadEcho(pn, output_processor.bufferSize)
 
-output_processor.addEventListener "audioprocess", (ev)->
+goldA = Signal.goldSeqGen(12, n("111000011001"), n("011110111111"), 0)
+goldB = Signal.goldSeqGen(12, n("100101000001"), n("101101010111"), 3)
+signalA = Signal.BPSK(goldA, 3000, 44100, 0, 44100)
+signalB = Signal.BPSK(goldB, 3000, 44100, 0, 44100)
+setTimeout ->
+  view Signal.fft_smart_overwrap_correlation(signalA, signalA), 1024
+  view Signal.fft_smart_overwrap_correlation(signalB, signalB), 1024
+console.log abufA = osc.createAudioBufferFromArrayBuffer(signalA, 44100)
+console.log abufB = osc.createAudioBufferFromArrayBuffer(signalB, 44100)
+anodeA = osc.createAudioNodeFromAudioBuffer(abufA)
+anodeB = osc.createAudioNodeFromAudioBuffer(abufB)
+anodeA.connect(actx.destination)
+anodeB.connect(actx.destination)
+anodeA.start(actx.currentTime + 1)
+anodeB.start(actx.currentTime + 4)
+
+recbuf = new RecordBuffer(actx.sampleRate, input_processor.bufferSize, input_processor.channelCount)
+
+input_processor.addEventListener "audioprocess", (ev)->
   buffer = ev.inputBuffer.getChannelData(0)
-  tse.encode(buffer)
-  #console.log tse.decode(buffer)
-  ev.outputBuffer.getChannelData(0).set(buffer, 0)
+  recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], actx.currentTime)
+  if actx.currentTime > 10
+    input_processor.disconnect()
+    rawdata = recbuf.merge()
+    view rawdata, 1024
+    _signalA = Signal.BPSK(goldA, 3000, 44100, 0, rawdata.length)
+    _signalB = Signal.BPSK(goldB, 3000, 44100, 0, rawdata.length)
+    view Signal.fft_smart_overwrap_correlation(rawdata, _signalA), 1024
+    view Signal.fft_smart_overwrap_correlation(rawdata, _signalB), 1024
 
 left  = (err)-> throw err
 right = (stream)->
   source = actx.createMediaStreamSource(stream)
   source.connect(input_processor)
-  input_processor.connect(actx.destination)
-  input_processor.addEventListener "audioprocess", (ev)->
-    buffer = ev.inputBuffer.getChannelData(0)
-    console.log tse.decode(buffer)
-    #ev.outputBuffer.getChannelData(0).set(buffer, 0)
-navigator.getUserMedia({video: false, audio: true}, right, left)
 
-osc.createAudioBufferFromURL("TellYourWorld1min.mp3").then (abuf)->
-  anode = osc.createAudioNodeFromAudioBuffer(abuf)
-  anode.connect(output_processor)
-  anode.start(actx.currentTime)
+navigator.getUserMedia({video: false, audio: true}, right, left)
