@@ -16,7 +16,7 @@ socket.on "connect",        -> socket.emit("colors")
 WIDTH = 400
 HEIGHT = 400
 RULED_LINE_INTERVAL = 50
-MULTIPASS_DISTANCE = 5
+MULTIPASS_DISTANCE = 7
 SOUND_OF_SPEED = 340
 VIEW_SIZE = Math.pow(2, 12)
 TIME_DATA = null
@@ -143,32 +143,20 @@ calc = (datas)-> (next)->
       __frame.view marker,"marker"
       zoomA = correlA.subarray(idxA-range, idxA+range)
       zoomB = correlB.subarray(idxB-range, idxB+range)
-      correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB)
+      correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB)# 位置が一致するように微調整
+      [_, idx] = Signal.Statictics.findMax(correl)
+      idxB += idx
+      zoomB = correlB.subarray(idxB-range, idxB+range)
+      zoomAB = zoomA.map (_,i)-> zoomA[i] + zoomB[i] # 加算
       __frame.view zoomA,"zoomA"
       __frame.view zoomB,"zoomB"
-      __frame.view correl,"correl"
-      [max, idx] = Signal.Statictics.findMax(correl)
-      i = 0
-      idxs = new Uint16Array(zoomB.length)
-      maxs = new Float32Array(zoomB.length)
-      prevIdx = idx
-      searchRange = 128
-      while i < zoomB.length*3/4
-        zoomB = correlB.subarray(i+idxB-range, i+idxB+range)
-        correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB)
-        begin = prevIdx - searchRange; if begin < 0 then 0 else begin
-        [max, idx] = Signal.Statictics.findMax(correl.subarray(begin, prevIdx + searchRange))
-        idxs[i] = begin + idx
-        maxs[i] = max
-        prevIdx = begin + idx
-        i += 10
-      __frame.view idxs,"idxs"
-      __frame.view maxs,"maxs"
-      [_, idx] = Signal.Statictics.findMax(maxs)
+      __frame.view zoomAB,"zoomAB"
+
+      [_, idx] = Signal.Statictics.findMax(zoomAB)
       marker = new Uint8Array(zoomB.length)
       marker[idx] = 255
       __frame.view marker,"marker"
-      max_offset = idx + idxB - range
+      max_offset = idx + idxA - range
       pulseTime = (startPtr + max_offset) / sampleRate
       {id: _id, max_offset, pulseTime}
     {id, alias, results: _results}

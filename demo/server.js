@@ -77,9 +77,9 @@
     console.log("started");
     return Promise.resolve().then(function() {
       return requestParallel("ready", {
-        length: 12,
-        seedA: n("101101010111"),
-        seedB: n("011110111111"),
+        length: 11,
+        seedA: n("01000000001"),
+        seedB: n("01001001001"),
         carrier_freq: 4410 / 2
       });
     }).then(function() {

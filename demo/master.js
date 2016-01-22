@@ -32,7 +32,7 @@
 
   RULED_LINE_INTERVAL = 50;
 
-  MULTIPASS_DISTANCE = 5;
+  MULTIPASS_DISTANCE = 7;
 
   SOUND_OF_SPEED = 340;
 
@@ -225,7 +225,7 @@
         recF32arr = new Float32Array(recF32arr);
         console.log(recF32arr.length, alias);
         _results = startStops.map(function(arg1) {
-          var _, __frame, _id, begin, correl, correlA, correlB, i, idx, idxA, idxB, idxs, marker, max, max_offset, maxs, prevIdx, pulseTime, range, rawdata, ref, ref1, ref2, ref3, ref4, ref5, ref6, relA, relB, scoreA, scoreB, searchRange, section, startPtr, stdscoreA, stdscoreB, stopPtr, zoomA, zoomB;
+          var _, __frame, _id, correl, correlA, correlB, idx, idxA, idxB, marker, max_offset, pulseTime, range, rawdata, ref, ref1, ref2, ref3, ref4, ref5, relA, relB, scoreA, scoreB, section, startPtr, stdscoreA, stdscoreB, stopPtr, zoomA, zoomAB, zoomB;
           _id = arg1.id, startPtr = arg1.startPtr, stopPtr = arg1.stopPtr;
           console.log(_id, startPtr, stopPtr);
           __frame = _craetePictureFrame(aliases[id] + "<->" + aliases[_id]);
@@ -273,37 +273,20 @@
           zoomA = correlA.subarray(idxA - range, idxA + range);
           zoomB = correlB.subarray(idxB - range, idxB + range);
           correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB);
+          ref4 = Signal.Statictics.findMax(correl), _ = ref4[0], idx = ref4[1];
+          idxB += idx;
+          zoomB = correlB.subarray(idxB - range, idxB + range);
+          zoomAB = zoomA.map(function(_, i) {
+            return zoomA[i] + zoomB[i];
+          });
           __frame.view(zoomA, "zoomA");
           __frame.view(zoomB, "zoomB");
-          __frame.view(correl, "correl");
-          ref4 = Signal.Statictics.findMax(correl), max = ref4[0], idx = ref4[1];
-          i = 0;
-          idxs = new Uint16Array(zoomB.length);
-          maxs = new Float32Array(zoomB.length);
-          prevIdx = idx;
-          searchRange = 128;
-          while (i < zoomB.length * 3 / 4) {
-            zoomB = correlB.subarray(i + idxB - range, i + idxB + range);
-            correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB);
-            begin = prevIdx - searchRange;
-            if (begin < 0) {
-              0;
-            } else {
-              begin;
-            }
-            ref5 = Signal.Statictics.findMax(correl.subarray(begin, prevIdx + searchRange)), max = ref5[0], idx = ref5[1];
-            idxs[i] = begin + idx;
-            maxs[i] = max;
-            prevIdx = begin + idx;
-            i += 10;
-          }
-          __frame.view(idxs, "idxs");
-          __frame.view(maxs, "maxs");
-          ref6 = Signal.Statictics.findMax(maxs), _ = ref6[0], idx = ref6[1];
+          __frame.view(zoomAB, "zoomAB");
+          ref5 = Signal.Statictics.findMax(zoomAB), _ = ref5[0], idx = ref5[1];
           marker = new Uint8Array(zoomB.length);
           marker[idx] = 255;
           __frame.view(marker, "marker");
-          max_offset = idx + idxB - range;
+          max_offset = idx + idxA - range;
           pulseTime = (startPtr + max_offset) / sampleRate;
           return {
             id: _id,
