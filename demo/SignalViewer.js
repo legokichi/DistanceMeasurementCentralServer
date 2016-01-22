@@ -53,7 +53,6 @@
         this.zoomY = this.cnv.height / (max - min + 0.0000001);
         this.offsetY = -min * this.zoomY;
       }
-      console.log(this.zoomY, this.offsetY);
       if (this.drawZero) {
         this.ctx.beginPath();
         this.ctx.moveTo(0, this.cnv.height - (this.zoomY * 0 + this.offsetY));

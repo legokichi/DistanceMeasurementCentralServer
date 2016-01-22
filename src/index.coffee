@@ -32,42 +32,78 @@ n = (a)-> a.split("").map(Number)
 # global var
 actx = new AudioContext()
 osc = new OSC(actx)
-input_processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1)
-input_processor.connect(actx.destination)
+processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1)
+processor.connect(actx.destination)
 
-goldA = Signal.goldSeqGen(12, n("111000011001"), n("011110111111"), 0)
-goldB = Signal.goldSeqGen(12, n("100101000001"), n("101101010111"), 3)
-signalA = Signal.BPSK(goldA, 3000, 44100, 0, 44100)
-signalB = Signal.BPSK(goldB, 3000, 44100, 0, 44100)
-setTimeout ->
-  view Signal.fft_smart_overwrap_correlation(signalA, signalA), 1024
-  view Signal.fft_smart_overwrap_correlation(signalB, signalB), 1024
-console.log abufA = osc.createAudioBufferFromArrayBuffer(signalA, 44100)
-console.log abufB = osc.createAudioBufferFromArrayBuffer(signalB, 44100)
-anodeA = osc.createAudioNodeFromAudioBuffer(abufA)
-anodeB = osc.createAudioNodeFromAudioBuffer(abufB)
-anodeA.connect(actx.destination)
-anodeB.connect(actx.destination)
-anodeA.start(actx.currentTime + 1)
-anodeB.start(actx.currentTime + 4)
+freq = 2205
+mseqA = Signal.mseqGen(12, n("111000011001"))
+mseqB = Signal.mseqGen(12, n("101101010111"))
+matchedA = Signal.BPSK(mseqA, freq, actx.sampleRate, 0)
+matchedB = Signal.BPSK(mseqB, freq, actx.sampleRate, 0)
+signal = new Float32Array(matchedA.length*2 + matchedB.length)
+signal.set(matchedA, 0)
+signal.set(matchedB, matchedA.length*2)
+console.log abuf = osc.createAudioBufferFromArrayBuffer(signal, actx.sampleRate)
+anode = osc.createAudioNodeFromAudioBuffer(abuf)
+anode.connect(actx.destination)
+anode.start(actx.currentTime+1)
 
-recbuf = new RecordBuffer(actx.sampleRate, input_processor.bufferSize, input_processor.channelCount)
+recbuf = new RecordBuffer(actx.sampleRate, processor.bufferSize, processor.channelCount)
 
-input_processor.addEventListener "audioprocess", (ev)->
-  buffer = ev.inputBuffer.getChannelData(0)
+processor.addEventListener "audioprocess", (ev)->
   recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], actx.currentTime)
-  if actx.currentTime > 10
-    input_processor.disconnect()
+  if actx.currentTime > abuf.duration+1
+    processor.disconnect()
     rawdata = recbuf.merge()
     view rawdata, 1024
-    _signalA = Signal.BPSK(goldA, 3000, 44100, 0, rawdata.length)
-    _signalB = Signal.BPSK(goldB, 3000, 44100, 0, rawdata.length)
-    view Signal.fft_smart_overwrap_correlation(rawdata, _signalA), 1024
-    view Signal.fft_smart_overwrap_correlation(rawdata, _signalB), 1024
+    correlA = Signal.fft_smart_overwrap_correlation(rawdata, matchedA)
+    correlB = Signal.fft_smart_overwrap_correlation(rawdata, matchedB)
+    view correlA, 1023
+    view correlB, 1023
+    [maxA, idxA] = Signal.Statictics.findMax(correlA)
+    [maxB, idxB] = Signal.Statictics.findMax(correlB)
+    console.log idxB, relB = idxA+matchedA.length*2
+    console.log idxA, relA = idxB-matchedA.length*2
+    if correlB[relB] + maxA > correlA[relA] + maxB
+      # Aが正しいのでAを修正
+      idxB = relB
+      maxB = correlB[idxB]
+    else
+      # Bが正しいのでAを修正
+      idxA = relA
+      maxA = correlA[idxA]
+    marker = new Uint8Array(correlA.length)
+    marker[idxA] = 255
+    marker[idxB] = 255
+    view marker, 1024
+    range = 5/340*actx.sampleRate|0
+    view zoomA = correlA.subarray(idxA-range, idxA+range)
+    view zoomB = correlB.subarray(idxB-range, idxB+range)
+    i = 0
+    idxs = new Uint16Array(zoomB.length)
+    maxs = new Float32Array(zoomB.length)
+    prevIdx = 0
+    searchRange = 128
+    do recur = ->
+      if i > zoomB.length
+        view idxs
+        view maxs
+        return
+      correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB.subarray(i, zoomB.length))
+      begin = if i - searchRange < 0 then 0 else i - searchRange
+      [max, idx] = Signal.Statictics.findMax(correl.subarray(begin, i + searchRange))
+      idxs[i] = begin + idx
+      maxs[i] = max
+      i += 10
+      setTimeout recur
+
+
+
+
 
 left  = (err)-> throw err
 right = (stream)->
   source = actx.createMediaStreamSource(stream)
-  source.connect(input_processor)
+  source.connect(processor)
 
 navigator.getUserMedia({video: false, audio: true}, right, left)

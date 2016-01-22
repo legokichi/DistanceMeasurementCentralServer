@@ -29,7 +29,6 @@ class this.SignalViewer
       @zoomX = @cnv.width / arr.length
       @zoomY = @cnv.height / (max - min + 0.0000001)
       @offsetY = -min*@zoomY
-    console.log @zoomY, @offsetY
     if @drawZero
       @ctx.beginPath()
       @ctx.moveTo(0,          @cnv.height - (@zoomY * 0 + @offsetY))
