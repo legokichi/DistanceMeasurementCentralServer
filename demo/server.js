@@ -32,6 +32,7 @@
   io.of('/node').on('connection', function(socket) {
     socket.on('disconnect', console.info.bind(console, "disconnect"));
     return socket.on("colors", function(data) {
+      console.log(io.of("/node"));
       return requestParallel(io.of('/node'), "color").then(function(datas) {
         return io.of('/ui').emit("colors", datas);
       });
@@ -64,7 +65,7 @@
     });
   });
 
-  server.listen(8000);
+  server.listen(8083);
 
   n = function(a) {
     return a.split("").map(Number);

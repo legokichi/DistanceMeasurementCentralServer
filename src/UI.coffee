@@ -17,11 +17,13 @@ RULED_LINE_INTERVAL = 50
 VS = [0, 0, "VS"]
 points = []
 drgTrgPtr = null
+TIME_DATA = null
 
 socket.on "connect",        -> socket.emit("colors")
 socket.on "colors",  (datas)-> points = datas.map ({id, color})-> [Math.random()*(WIDTH-100)+50, Math.random()*(HEIGHT-100)+50, color, id]
-socket.on "repos",   (TIME_DATA)->
-  console.log "repos", TIME_DATA
+socket.on "repos",   (_TIME_DATA)->
+  console.log "repos", _TIME_DATA
+  TIME_DATA = _TIME_DATA
   {pulseTimes, delayTimes, aliases, recStartTimes, now, currentTimes, distances} = TIME_DATA
   ds = Object.keys(delayTimes).map (id1)->
     Object.keys(delayTimes).map (id2)->

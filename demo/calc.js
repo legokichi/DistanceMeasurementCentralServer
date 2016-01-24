@@ -57,7 +57,7 @@
         recF32arr = new Float32Array(recF32arr);
         console.log(recF32arr.length, alias);
         _results = startStops.map(function(arg1) {
-          var _, __frame, _id, correl, correlA, correlB, i, idx, idxA, idxB, logs, marker, max_offset, pulseTime, range, rawdata, ref, ref1, ref2, ref3, relA, relB, scoreA, scoreB, section, slidewidth, startPtr, stdscoreA, stdscoreB, stopPtr, val, windowsize, zoom, zoomA, zoomB;
+          var _, __frame, _id, _idx, _logs, correl, correlA, correlB, i, idx, idxA, idxB, logs, marker, max, max_offset, pulseTime, range, rawdata, ref, ref1, ref2, relA, relB, scoreA, scoreB, section, slidewidth, startPtr, stdscoreA, stdscoreB, stopPtr, val, windowsize, zoom, zoomA, zoomB;
           _id = arg1.id, startPtr = arg1.startPtr, stopPtr = arg1.stopPtr;
           console.log(_id, startPtr, stopPtr);
           __frame = _craetePictureFrame(aliases[id] + "<->" + aliases[_id]);
@@ -110,18 +110,11 @@
           __frame.view(zoomB, "zoomB");
           correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB);
           __frame.view(correl, "correl");
-          ref2 = Signal.Statictics.findMax(correl), _ = ref2[0], idx = ref2[1];
-          idxB += idx;
-          zoomB = correlB.subarray(idxB - range, idxB + range);
-          __frame.view(zoomB, "zoomB(adjasted(+" + idx + "))");
-          idxB -= idx;
-          zoomB = correlB.subarray(idxB - range, idxB + range);
-          __frame.view(zoomB, "zoomB(adjasted(-" + idx + "))");
           zoom = zoomA.map(function(_, i) {
             return zoomA[i] * zoomB[i];
           });
-          logs = new Float32Array(zoomA.length);
-          windowsize = 128;
+          logs = new Float32Array(zoom.length);
+          windowsize = (1 / SOUND_OF_SPEED * sampleRate) | 0;
           slidewidth = 1;
           i = 0;
           while (zoomA.length > i + windowsize) {
@@ -132,7 +125,17 @@
             i += slidewidth;
           }
           __frame.view(logs, "logs");
-          ref3 = Signal.Statictics.findMax(logs), _ = ref3[0], idx = ref3[1];
+          _logs = Signal.lowpass(logs, sampleRate, 500, 1);
+          __frame.view(_logs, "logs(lowpass)");
+          ref2 = Signal.Statictics.findMax(_logs), max = ref2[0], _idx = ref2[1];
+          i = 1;
+          while (i < _idx && _logs[i] < max / 3) {
+            i++;
+          }
+          while (i < _idx && _logs[i] > _logs[i - 1]) {
+            i++;
+          }
+          idx = i;
           marker = new Uint8Array(logs.length);
           marker[idx] = 255;
           __frame.view(marker, "marker");

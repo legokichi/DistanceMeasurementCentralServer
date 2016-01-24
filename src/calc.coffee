@@ -78,18 +78,12 @@ calc = (datas)-> (next)->
       # 位置が一致するように微調整
       correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB)
       __frame.view correl, "correl"
-      [_, idx] = Signal.Statictics.findMax(correl)
-      idxB += idx
-      zoomB = correlB.subarray(idxB-range, idxB+range)
-      __frame.view zoomB, "zoomB(adjasted(+#{idx}))"
-      idxB -= idx
-      zoomB = correlB.subarray(idxB-range, idxB+range)
-      __frame.view zoomB, "zoomB(adjasted(-#{idx}))"
+            
       # 区間に分けて相関値を探索
       # パルス位置は上記の通りを一致させてあるので AとBの区間において相互相関[0] の位置の相関値を調べグラフ化
       zoom = zoomA.map (_, i)-> zoomA[i]*zoomB[i]
-      logs = new Float32Array(zoomA.length)
-      windowsize = 128
+      logs = new Float32Array(zoom.length)
+      windowsize = (1/SOUND_OF_SPEED*sampleRate)|0
       slidewidth = 1
       i = 0
       while zoomA.length > i + windowsize
@@ -97,7 +91,13 @@ calc = (datas)-> (next)->
         logs[i] = val
         i += slidewidth
       __frame.view logs, "logs"
-      [_, idx] = Signal.Statictics.findMax(logs)
+      _logs = Signal.lowpass(logs, sampleRate, 500, 1)
+      __frame.view _logs, "logs(lowpass)"
+      [max, _idx] = Signal.Statictics.findMax(_logs)
+      i = 1
+      i++ while i < _idx && _logs[i] < max/3
+      i++ while i < _idx && _logs[i] > _logs[i-1]
+      idx = i
       marker = new Uint8Array(logs.length)
       marker[idx] = 255
       __frame.view marker, "marker"

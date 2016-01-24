@@ -18,7 +18,7 @@ app.use('/', express.static(__dirname + '/../demo'))
 
 io.of('/node').on 'connection', (socket)->
   socket.on 'disconnect', console.info.bind(console, "disconnect")
-  socket.on "colors", (data)-> requestParallel(io.of('/node'), "color").then (datas)-> io.of('/ui').emit("colors", datas)
+  socket.on "colors", (data)-> console.log(io.of("/node")); requestParallel(io.of('/node'), "color").then (datas)-> io.of('/ui').emit("colors", datas)
 
 io.of('/calc').on 'connection', (socket)->
   socket.on 'disconnect', console.info.bind(console, "disconnect")
@@ -30,7 +30,7 @@ io.of('/ui').on 'connection', (socket)->
   socket.on "play",   (data)-> console.log("ui:play->node:play");                io.of('/node').emit("play", data)
   socket.on "colors", (data)-> console.log("ui:colors->node:colors->ui:colors"); requestParallel(io.of('/node'), "color").then (datas)-> socket.emit("colors", datas)
 
-server.listen(8000)
+server.listen(8083)
 
 # length: 15, seed: n("100000000000001")
 # length: 14, seed: n("11000000000101")
