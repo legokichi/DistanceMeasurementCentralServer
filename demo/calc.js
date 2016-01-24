@@ -32,7 +32,7 @@
 
   calc = function(datas) {
     return function(next) {
-      var TIME_DATA, aliases, currentTimes, delayTimes, delayTimesAliased, distances, distancesAliased, frame, now, pulseTimes, pulseTimesAliased, recStartTimes, relDelayTimes, relDelayTimesAliased, results, sampleRates;
+      var TIME_DATA, aliases, currentTimes, delayTimes, delayTimesAliased, distances, distancesAliased, frame, max_vals, max_valsAliased, now, pulseTimes, pulseTimesAliased, recStartTimes, relDelayTimes, relDelayTimesAliased, results, sampleRates;
       if (datas.length === 0) {
         return next();
       }
@@ -57,7 +57,7 @@
         recF32arr = new Float32Array(recF32arr);
         console.log(recF32arr.length, alias);
         _results = startStops.map(function(arg1) {
-          var _, __frame, _id, _idx, _logs, correl, correlA, correlB, i, idx, idxA, idxB, logs, marker, max, max_offset, pulseTime, range, rawdata, ref, ref1, ref2, relA, relB, scoreA, scoreB, section, slidewidth, startPtr, stdscoreA, stdscoreB, stopPtr, val, windowsize, zoom, zoomA, zoomB;
+          var _, __frame, _id, _idx, _logs, correl, correlA, correlB, i, idx, idxA, idxB, logs, marker, max, maxA, maxB, max_offset, max_val, pulseTime, range, rawdata, ref, ref1, ref2, relA, relB, scoreA, scoreB, section, slidewidth, startPtr, stdscoreA, stdscoreB, stopPtr, val, windowsize, zoom, zoomA, zoomB;
           _id = arg1.id, startPtr = arg1.startPtr, stopPtr = arg1.stopPtr;
           console.log(_id, startPtr, stopPtr, recF32arr[0]);
           __frame = _craetePictureFrame(aliases[id] + "<->" + aliases[_id]);
@@ -108,6 +108,8 @@
           } else {
             idxB = relB;
           }
+          maxA = correlA[idxA];
+          maxB = correlB[idxB];
           marker = new Uint8Array(correlA.length);
           marker[idxA - range] = 255;
           marker[idxA] = 255;
@@ -141,7 +143,7 @@
           __frame.view(_logs, "logs(lowpass)");
           ref2 = Signal.Statictics.findMax(_logs), max = ref2[0], _idx = ref2[1];
           i = 1;
-          while (i < _idx && _logs[i] < max / 3) {
+          while (i < _idx && _logs[i] < max / 5) {
             i++;
           }
           while (i < _idx && _logs[i] > _logs[i - 1]) {
@@ -153,10 +155,12 @@
           __frame.view(marker, "marker");
           max_offset = idx + (idxA - range);
           pulseTime = (startPtr + max_offset) / sampleRate;
+          max_val = (maxA + maxB) / 2;
           return {
             id: _id,
             max_offset: max_offset,
-            pulseTime: pulseTime
+            pulseTime: pulseTime,
+            max_val: max_val
           };
         });
         return {
@@ -186,21 +190,27 @@
       pulseTimes = {};
       relDelayTimes = {};
       delayTimes = {};
+      max_vals = {};
       distances = {};
       relDelayTimesAliased = {};
       distancesAliased = {};
       delayTimesAliased = {};
       pulseTimesAliased = {};
+      max_valsAliased = {};
       results.forEach(function(arg) {
         var alias, id, results;
         id = arg.id, alias = arg.alias, results = arg.results;
         return results.forEach(function(arg1) {
-          var _id, max_offset, pulseTime;
-          _id = arg1.id, max_offset = arg1.max_offset, pulseTime = arg1.pulseTime;
+          var _id, max_offset, max_val, pulseTime;
+          _id = arg1.id, max_offset = arg1.max_offset, pulseTime = arg1.pulseTime, max_val = arg1.max_val;
           pulseTimes[id] = pulseTimes[id] || {};
           pulseTimes[id][_id] = pulseTime;
           pulseTimesAliased[aliases[id]] = pulseTimesAliased[aliases[id]] || {};
-          return pulseTimesAliased[aliases[id]][aliases[_id]] = pulseTimes[id][_id];
+          pulseTimesAliased[aliases[id]][aliases[_id]] = pulseTimes[id][_id];
+          max_vals[id] = max_vals[id] || {};
+          max_vals[id][_id] = max_val;
+          max_valsAliased[aliases[id]] = max_valsAliased[aliases[id]] || {};
+          return max_valsAliased[aliases[id]][aliases[_id]] = max_vals[id][_id];
         });
       });
       Object.keys(pulseTimes).forEach(function(id1) {
@@ -233,9 +243,11 @@
       console.table(delayTimesAliased);
       console.info("distancesAliased");
       console.table(distancesAliased);
+      console.info("max_valsAliased");
+      console.table(max_valsAliased);
       console.groupEnd();
       document.body.style.backgroundColor = "lime";
-      TIME_DATA = {
+      console.log("TIME_DATA", TIME_DATA = {
         pulseTimes: pulseTimes,
         delayTimes: delayTimes,
         aliases: aliases,
@@ -243,8 +255,9 @@
         now: now,
         currentTimes: currentTimes,
         id: results[0].id,
-        distances: distances
-      };
+        distances: distances,
+        max_vals: max_vals
+      });
       return next(TIME_DATA);
     };
   };

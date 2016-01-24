@@ -55,7 +55,9 @@ start = ->
   console.log "started"
   Promise.resolve()
   .then -> requestParallel io.of('/node'), "ready", {length: 10, seedA: n("0010000001"), seedB: n("0011111111"), carrier_freq: 4410}
-  .then -> log "sockets", io.of('/node').sockets.map (socket)-> socket.id
+  .then -> log "node:sockets", io.of('/node').sockets.map (socket)-> socket.id
+  .then -> log "ui:sockets", io.of('/ui').sockets.map (socket)-> socket.id
+  .then -> log "calc:sockets", io.of('/calc').sockets.map (socket)-> socket.id
   .then -> requestParallel io.of('/node'), "startRec"
   .then ->
     prms = io.of('/node').sockets.map (socket)-> ->

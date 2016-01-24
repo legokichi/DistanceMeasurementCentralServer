@@ -24,7 +24,7 @@ socket.on "colors",  (datas)-> points = datas.map ({id, color})-> [Math.random()
 socket.on "repos",   (_TIME_DATA)->
   console.log "repos", _TIME_DATA
   TIME_DATA = _TIME_DATA
-  {pulseTimes, delayTimes, aliases, recStartTimes, now, currentTimes, distances} = TIME_DATA
+  {pulseTimes, delayTimes, aliases, recStartTimes, now, currentTimes, distances, max_vals} = TIME_DATA
   ds = Object.keys(delayTimes).map (id1)->
     Object.keys(delayTimes).map (id2)->
       distances[id1][id2]
@@ -79,6 +79,27 @@ main = (_)->
       k = 1/ Math.sqrt(sum)
       _volumes = distancesVS.map (d)-> k / Math.pow(d, a)
       volumes = points.reduce(((o, [x, y, color1, id1], i)-> o[id1] = _volumes[i]; o), {})
+      _id = null # base volume device id
+      _val = Infinity
+      Object.keys(volumes).forEach (id1)->
+        Object.keys(volumes).forEach (id2)->
+          if id1 is id2 then return
+          if TIME_DATA.max_vals[id1][id2] < _val
+            _val = TIME_DATA.max_vals[id1][id2]
+            _id = id2
+      id0 = _id
+      Object.keys(volumes).forEach (id1)->
+        if id0 is null then return
+        if id1 is id0 then return
+        weight = 0
+        i = 0
+        Object.keys(volumes).forEach (id2)->
+          if id2 is id0 then return
+          if id1 is id2 then return
+          i++
+          weight += (TIME_DATA.max_vals[id1][id2] * TIME_DATA.distances[id1][id2]) / (TIME_DATA.max_vals[id0][id2] * TIME_DATA.distances[id0][id2])
+        console.log id0, id1, weight, i
+        volumes[id1] *= weight/i
       socket.emit("volume", volumes)
     _.background(255)
     # 罫線

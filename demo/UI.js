@@ -47,10 +47,10 @@
   });
 
   socket.on("repos", function(_TIME_DATA) {
-    var K, aliases, basePt, currentTimes, delayTimes, distances, ds, ids, now, pseudoPts, pulseTimes, recStartTimes, sdm;
+    var K, aliases, basePt, currentTimes, delayTimes, distances, ds, ids, max_vals, now, pseudoPts, pulseTimes, recStartTimes, sdm;
     console.log("repos", _TIME_DATA);
     TIME_DATA = _TIME_DATA;
-    pulseTimes = TIME_DATA.pulseTimes, delayTimes = TIME_DATA.delayTimes, aliases = TIME_DATA.aliases, recStartTimes = TIME_DATA.recStartTimes, now = TIME_DATA.now, currentTimes = TIME_DATA.currentTimes, distances = TIME_DATA.distances;
+    pulseTimes = TIME_DATA.pulseTimes, delayTimes = TIME_DATA.delayTimes, aliases = TIME_DATA.aliases, recStartTimes = TIME_DATA.recStartTimes, now = TIME_DATA.now, currentTimes = TIME_DATA.currentTimes, distances = TIME_DATA.distances, max_vals = TIME_DATA.max_vals;
     ds = Object.keys(delayTimes).map(function(id1) {
       return Object.keys(delayTimes).map(function(id2) {
         return distances[id1][id2];
@@ -114,7 +114,7 @@
       VS = [50, 50, "VS", "VS"];
     };
     _.draw = function() {
-      var R, __l, __x, __y, _volumes, _x, _y, a, distancesVS, i, id, j, k, l, len, len1, m, n, name, p, point, q, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, sum, volumes, x, y;
+      var R, __l, __x, __y, _id, _val, _volumes, _x, _y, a, distancesVS, i, id, id0, j, k, l, len, len1, m, n, name, p, point, q, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, sum, volumes, x, y;
       if (drgTrgPtr != null) {
         drgTrgPtr[0] = _.mouseX;
         drgTrgPtr[1] = _.mouseY;
@@ -139,6 +139,43 @@
           o[id1] = _volumes[i];
           return o;
         }), {});
+        _id = null;
+        _val = Infinity;
+        Object.keys(volumes).forEach(function(id1) {
+          return Object.keys(volumes).forEach(function(id2) {
+            if (id1 === id2) {
+              return;
+            }
+            if (TIME_DATA.max_vals[id1][id2] < _val) {
+              _val = TIME_DATA.max_vals[id1][id2];
+              return _id = id2;
+            }
+          });
+        });
+        id0 = _id;
+        Object.keys(volumes).forEach(function(id1) {
+          var i, weight;
+          if (id0 === null) {
+            return;
+          }
+          if (id1 === id0) {
+            return;
+          }
+          weight = 0;
+          i = 0;
+          Object.keys(volumes).forEach(function(id2) {
+            if (id2 === id0) {
+              return;
+            }
+            if (id1 === id2) {
+              return;
+            }
+            i++;
+            return weight += (TIME_DATA.max_vals[id1][id2] * TIME_DATA.distances[id1][id2]) / (TIME_DATA.max_vals[id0][id2] * TIME_DATA.distances[id0][id2]);
+          });
+          console.log(id0, id1, weight, i);
+          return volumes[id1] *= weight / i;
+        });
         socket.emit("volume", volumes);
       }
       _.background(255);

@@ -81,7 +81,15 @@
         carrier_freq: 4410
       });
     }).then(function() {
-      return log("sockets", io.of('/node').sockets.map(function(socket) {
+      return log("node:sockets", io.of('/node').sockets.map(function(socket) {
+        return socket.id;
+      }));
+    }).then(function() {
+      return log("ui:sockets", io.of('/ui').sockets.map(function(socket) {
+        return socket.id;
+      }));
+    }).then(function() {
+      return log("calc:sockets", io.of('/calc').sockets.map(function(socket) {
         return socket.id;
       }));
     }).then(function() {

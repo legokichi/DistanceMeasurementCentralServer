@@ -100,7 +100,7 @@ calc = (datas)-> (next)->
       __frame.view _logs, "logs(lowpass)"
       [max, _idx] = Signal.Statictics.findMax(_logs)
       i = 1
-      i++ while i < _idx && _logs[i] < max/3
+      i++ while i < _idx && _logs[i] < max/5
       i++ while i < _idx && _logs[i] > _logs[i-1]
       idx = i
       marker = new Uint8Array(logs.length)
@@ -161,7 +161,7 @@ calc = (datas)-> (next)->
   console.groupEnd()
 
   document.body.style.backgroundColor = "lime"
-  TIME_DATA = {pulseTimes, delayTimes, aliases, recStartTimes, now, currentTimes, id: results[0].id, distances}
+  console.log "TIME_DATA", TIME_DATA = {pulseTimes, delayTimes, aliases, recStartTimes, now, currentTimes, id: results[0].id, distances, max_vals}
   next(TIME_DATA)
 
 
