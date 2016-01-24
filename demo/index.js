@@ -57,6 +57,17 @@
 
   processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1);
 
+  processor.connect(actx.destination);
+
+  processor.addEventListener("audioprocess", function(ev) {
+    if (isRecording) {
+      recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], actx.currentTime);
+    }
+    if (typeof __nextTick__ !== "undefined" && __nextTick__ !== null) {
+      return __nextTick__();
+    }
+  });
+
   recbuf = null;
 
   isRecording = false;
@@ -257,15 +268,6 @@
       var source;
       source = actx.createMediaStreamSource(stream);
       source.connect(processor);
-      processor.connect(actx.destination);
-      processor.addEventListener("audioprocess", function(ev) {
-        if (isRecording) {
-          recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], actx.currentTime);
-        }
-        if (__nextTick__ != null) {
-          return __nextTick__();
-        }
-      });
       return next();
     };
     return navigator.getUserMedia({

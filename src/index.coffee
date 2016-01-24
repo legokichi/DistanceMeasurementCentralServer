@@ -41,6 +41,11 @@ osc = new OSC(actx)
 gain = actx.createGain()
 gain.connect(actx.destination)
 processor = actx.createScriptProcessor(Math.pow(2, 14), 1, 1); # between Math.pow(2,8) and Math.pow(2,14).
+processor.connect(actx.destination)
+processor.addEventListener "audioprocess", (ev)->
+  if isRecording
+    recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], actx.currentTime)
+  __nextTick__() if __nextTick__?
 # need initialize
 recbuf = null
 isRecording = false
@@ -124,6 +129,7 @@ sendRec    = (next)->
     currentTime: actx.currentTime
   recbuf.clear()
   next(o)
+
 play = (data)->
   {wait, pulseTimes, delayTimes, id, currentTimes, recStartTimes, now, now2} = data
   # pulseTimes[socket.id][id] 自分がidの音を聞いた時刻
@@ -145,11 +151,6 @@ _prepareRec = (next)->
   right = (stream)->
     source = actx.createMediaStreamSource(stream)
     source.connect(processor)
-    processor.connect(actx.destination)
-    processor.addEventListener "audioprocess", (ev)->
-      if isRecording
-        recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], actx.currentTime)
-      __nextTick__() if __nextTick__?
     next()
   navigator.getUserMedia({video: false, audio: true}, right, left)
 
