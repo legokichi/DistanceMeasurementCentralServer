@@ -62,6 +62,9 @@ calc = (datas)-> (next)->
         # Aが正しいのでBを修正
         #[_, idx] = Signal.Statictics.findMax(correlB.subarray(relB-range, relB+range))
         idxB = relB# - range + idx
+      # 音圧ピーク値
+      maxA = correlA[idxA]
+      maxB = correlB[idxB]
       marker = new Uint8Array(correlA.length)
       marker[idxA-range] = 255
       marker[idxA] = 255
@@ -78,7 +81,7 @@ calc = (datas)-> (next)->
       # 位置が一致するように微調整
       correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB)
       __frame.view correl, "correl"
-            
+
       # 区間に分けて相関値を探索
       # パルス位置は上記の通りを一致させてあるので AとBの区間において相互相関[0] の位置の相関値を調べグラフ化
       zoom = zoomA.map (_, i)-> zoomA[i]*zoomB[i]
@@ -103,7 +106,8 @@ calc = (datas)-> (next)->
       __frame.view marker, "marker"
       max_offset = idx + (idxA - range)
       pulseTime = (startPtr + max_offset) / sampleRate
-      {id: _id, max_offset, pulseTime}
+      max_val = (maxA + maxB)/2
+      {id: _id, max_offset, pulseTime, max_val}
     {id, alias, results: _results}
   sampleRates = datas.reduce(((o, {id, sampleRate})-> o[id] = sampleRate; o), {})
   recStartTimes = datas.reduce(((o, {id, recStartTime})-> o[id] = recStartTime; o), {})
@@ -111,17 +115,23 @@ calc = (datas)-> (next)->
   pulseTimes = {} # 各端末時間での録音開始してからの自分のパルスを鳴らした時間
   relDelayTimes = {} # 自分にとって相手の音は何秒前or何秒後に聞こえたか。delayTimes算出に必要
   delayTimes = {} # 音速によるパルスの伝播時間
+  max_vals = {} # 観測した最大音圧
   distances = {}
   relDelayTimesAliased = {}
   distancesAliased = {}
   delayTimesAliased = {}
   pulseTimesAliased = {}
+  max_valsAliased = {}
   results.forEach ({id, alias, results})->
-    results.forEach ({id: _id, max_offset, pulseTime})->
+    results.forEach ({id: _id, max_offset, pulseTime, max_val})->
       pulseTimes[id] = pulseTimes[id] || {}
       pulseTimes[id][_id] = pulseTime
       pulseTimesAliased[aliases[id]] = pulseTimesAliased[aliases[id]] || {}
       pulseTimesAliased[aliases[id]][aliases[_id]] = pulseTimes[id][_id]
+      max_vals[id] = max_vals[id] || {}
+      max_vals[id][_id] = max_val
+      max_valsAliased[aliases[id]] = max_valsAliased[aliases[id]] || {}
+      max_valsAliased[aliases[id]][aliases[_id]] = max_vals[id][_id]
   Object.keys(pulseTimes).forEach (id1)->
     Object.keys(pulseTimes).forEach (id2)->
       relDelayTimes[id1] = relDelayTimes[id1] || {}
@@ -145,6 +155,7 @@ calc = (datas)-> (next)->
   console.info("relDelayTimesAliased"); console.table(relDelayTimesAliased)
   console.info("delayTimesAliased");    console.table(delayTimesAliased)
   console.info("distancesAliased");     console.table(distancesAliased)
+  console.info("max_valsAliased");      console.table(max_valsAliased)
   console.groupEnd()
 
   document.body.style.backgroundColor = "lime"
