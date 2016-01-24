@@ -11,7 +11,7 @@ socket.on "reconnect_failed",  console.info.bind(console, "reconnect_failed")
 socket.on "disconnect",        console.info.bind(console, "disconnect")
 socket.on "error",             console.info.bind(console, "error")
 
-MULTIPASS_DISTANCE = 3
+MULTIPASS_DISTANCE = 5
 SOUND_OF_SPEED = 340
 
 socket.on "calc", (a)-> calc(a) (a)-> socket.emit("calc", a)
@@ -31,7 +31,7 @@ calc = (datas)-> (next)->
     recF32arr = new Float32Array(recF32arr)
     console.log recF32arr.length, alias
     _results = startStops.map ({id: _id, startPtr, stopPtr})->
-      console.log _id, startPtr, stopPtr
+      console.log _id, startPtr, stopPtr, recF32arr[0]
       __frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"; _frame.add __frame.element
       rawdata = section = recF32arr.subarray(startPtr, stopPtr)
       correlA = Signal.fft_smart_overwrap_correlation(rawdata, matchedA)
@@ -41,15 +41,17 @@ calc = (datas)-> (next)->
       __frame.view correlB, "correlB"
       [_, idxA] = Signal.Statictics.findMax(correlA)
       [_, idxB] = Signal.Statictics.findMax(correlB)
-      relB = idxA+matchedA.length*2 # Bの位置とAから見たBの位置
-      relA = idxB-matchedA.length*2 # Aの位置とBから見たAの位置
+      relB = idxA+matchedA.length*2; if relB < 0 then relB = 0; # Bの位置とAから見たBの位置
+      relA = idxB-matchedA.length*2; if relA < 0 then relA = 0; # Aの位置とBから見たAの位置
       stdscoreA = do ->
         ave = Signal.Statictics.average(correlA)
         vari = Signal.Statictics.variance(correlA)
+        if vari is 0 then vari = 0.000001
         (x)-> 10 * (x - ave) / vari + 50
       stdscoreB = do ->
         ave = Signal.Statictics.average(correlB)
         vari = Signal.Statictics.variance(correlB)
+        if vari is 0 then vari = 0.000001
         (x)-> 10 * (x - ave) / vari + 50
       scoreB = stdscoreB(correlB[idxB]) + stdscoreA(correlA[relA])
       scoreA = stdscoreA(correlA[idxA]) + stdscoreB(correlB[relB]) # Aの値とAから見たBの位置の値
