@@ -147,6 +147,12 @@ calc = (datas)-> (next)->
       [_, idx] = Signal.Statictics.findMax(correl)
       idxB += idx
       zoomB = correlB.subarray(idxB-range, idxB+range)
+      ###
+      # 区間に分けて相関値を探索
+      # パルス位置は上記の通りを一致させてあるので AとBの区間において相互相関[0] の位置の相関値を調べグラフ化
+
+
+      ###
       zoomAB = zoomA.map (_,i)-> zoomA[i] + zoomB[i] # 加算
       __frame.view zoomA,"zoomA"
       __frame.view zoomB,"zoomB"
