@@ -20,7 +20,7 @@
 
   socket.on("error", console.info.bind(console, "error"));
 
-  MULTIPASS_DISTANCE = 8;
+  MULTIPASS_DISTANCE = 3;
 
   SOUND_OF_SPEED = 340;
 
@@ -114,7 +114,7 @@
             return zoomA[i] * zoomB[i];
           });
           logs = new Float32Array(zoom.length);
-          windowsize = (1 / SOUND_OF_SPEED * sampleRate) | 0;
+          windowsize = (0.6 / SOUND_OF_SPEED * sampleRate) | 0;
           slidewidth = 1;
           i = 0;
           while (zoomA.length > i + windowsize) {
@@ -125,7 +125,7 @@
             i += slidewidth;
           }
           __frame.view(logs, "logs");
-          _logs = Signal.lowpass(logs, sampleRate, 500, 1);
+          _logs = Signal.lowpass(logs, sampleRate, 800, 1);
           __frame.view(_logs, "logs(lowpass)");
           ref2 = Signal.Statictics.findMax(_logs), max = ref2[0], _idx = ref2[1];
           i = 1;

@@ -11,7 +11,7 @@ socket.on "reconnect_failed",  console.info.bind(console, "reconnect_failed")
 socket.on "disconnect",        console.info.bind(console, "disconnect")
 socket.on "error",             console.info.bind(console, "error")
 
-MULTIPASS_DISTANCE = 8
+MULTIPASS_DISTANCE = 3
 SOUND_OF_SPEED = 340
 
 socket.on "calc", (a)-> calc(a) (a)-> socket.emit("calc", a)
@@ -83,7 +83,7 @@ calc = (datas)-> (next)->
       # パルス位置は上記の通りを一致させてあるので AとBの区間において相互相関[0] の位置の相関値を調べグラフ化
       zoom = zoomA.map (_, i)-> zoomA[i]*zoomB[i]
       logs = new Float32Array(zoom.length)
-      windowsize = (1/SOUND_OF_SPEED*sampleRate)|0
+      windowsize = (0.6/SOUND_OF_SPEED*sampleRate)|0
       slidewidth = 1
       i = 0
       while zoomA.length > i + windowsize
@@ -91,7 +91,7 @@ calc = (datas)-> (next)->
         logs[i] = val
         i += slidewidth
       __frame.view logs, "logs"
-      _logs = Signal.lowpass(logs, sampleRate, 500, 1)
+      _logs = Signal.lowpass(logs, sampleRate, 800, 1)
       __frame.view _logs, "logs(lowpass)"
       [max, _idx] = Signal.Statictics.findMax(_logs)
       i = 1
