@@ -20,7 +20,7 @@
 
   socket.on("error", console.info.bind(console, "error"));
 
-  MULTIPASS_DISTANCE = 3;
+  MULTIPASS_DISTANCE = 5;
 
   SOUND_OF_SPEED = 340;
 
@@ -59,7 +59,7 @@
         _results = startStops.map(function(arg1) {
           var _, __frame, _id, _idx, _logs, correl, correlA, correlB, i, idx, idxA, idxB, logs, marker, max, max_offset, pulseTime, range, rawdata, ref, ref1, ref2, relA, relB, scoreA, scoreB, section, slidewidth, startPtr, stdscoreA, stdscoreB, stopPtr, val, windowsize, zoom, zoomA, zoomB;
           _id = arg1.id, startPtr = arg1.startPtr, stopPtr = arg1.stopPtr;
-          console.log(_id, startPtr, stopPtr);
+          console.log(_id, startPtr, stopPtr, recF32arr[0]);
           __frame = _craetePictureFrame(aliases[id] + "<->" + aliases[_id]);
           _frame.add(__frame.element);
           rawdata = section = recF32arr.subarray(startPtr, stopPtr);
@@ -71,11 +71,20 @@
           ref = Signal.Statictics.findMax(correlA), _ = ref[0], idxA = ref[1];
           ref1 = Signal.Statictics.findMax(correlB), _ = ref1[0], idxB = ref1[1];
           relB = idxA + matchedA.length * 2;
+          if (relB < 0) {
+            relB = 0;
+          }
           relA = idxB - matchedA.length * 2;
+          if (relA < 0) {
+            relA = 0;
+          }
           stdscoreA = (function() {
             var ave, vari;
             ave = Signal.Statictics.average(correlA);
             vari = Signal.Statictics.variance(correlA);
+            if (vari === 0) {
+              vari = 0.000001;
+            }
             return function(x) {
               return 10 * (x - ave) / vari + 50;
             };
@@ -84,6 +93,9 @@
             var ave, vari;
             ave = Signal.Statictics.average(correlB);
             vari = Signal.Statictics.variance(correlB);
+            if (vari === 0) {
+              vari = 0.000001;
+            }
             return function(x) {
               return 10 * (x - ave) / vari + 50;
             };
