@@ -4,6 +4,8 @@
 \usepackage{graphicx}
 \usepackage{epsf}
 \usepackage{url}
+\usepackage{amsmath}
+\usepackage{amsfonts}
 
 \let\origtitle\title
 \let\origauthor\author
@@ -32,7 +34,7 @@
 \renewcommand{\footrulewidth}{0.4pt}
 \renewcommand{\title}[1]{\lfoot{\footnotesize{#1}\origtitle{#1}}\renewcommand{\thetitle}{#1}}
 \renewcommand{\author}[1]{\rfoot{\footnotesize{#1}\origauthor{#1}}\renewcommand{\theauthor}{#1}}
-%\lhead[{\footnotesize\hspace{1em}\thepage\hspace{2em}\rightmark}]{} 
+%\lhead[{\footnotesize\hspace{1em}\thepage\hspace{2em}\rightmark}]{}
 %\rhead[]{{\footnotesize\hspace{1em}\leftmark\hspace{2em}\thepage}} %見開き用
 \newcommand{\athr}[1]{\author{#1}}
 
@@ -80,9 +82,9 @@
 \input{exp.tex}
 \input{discus.tex}
 \input{concl.tex}
-\input{bib.tex}
+%\input{bib.tex}
 \input{ack.tex}
-\input{apend.tex}
+%\input{apend.tex}
 
 
 
