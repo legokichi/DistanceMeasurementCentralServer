@@ -18,6 +18,12 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
 app.use('/', express.static(__dirname + '/../demo'))
 
+app.get '/start', (req, res)->
+  res.statusCode = 204
+  res.send()
+  start()
+
+
 
 io.of('/node').on 'connection', (socket)->
   socket.on 'disconnect', console.info.bind(console, "disconnect")

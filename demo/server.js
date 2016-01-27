@@ -40,6 +40,12 @@
 
   app.use('/', express["static"](__dirname + '/../demo'));
 
+  app.get('/start', function(req, res) {
+    res.statusCode = 204;
+    res.send();
+    return start();
+  });
+
   io.of('/node').on('connection', function(socket) {
     socket.on('disconnect', console.info.bind(console, "disconnect"));
     return socket.on("colors", function(data) {
