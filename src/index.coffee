@@ -148,7 +148,7 @@ play = (data)->
   osc.createAudioBufferFromURL("./TellYourWorld1min.mp3").then (abuf)->
     node = osc.createAudioNodeFromAudioBuffer(abuf)
     node.start(offsetTime)
-    node.stop(offsetTime+3)
+    node.stop(offsetTime+10)
     node.loop = false
     node.connect(gain)
 

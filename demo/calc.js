@@ -20,7 +20,7 @@
 
   socket.on("error", console.info.bind(console, "error"));
 
-  MULTIPASS_DISTANCE = 7;
+  MULTIPASS_DISTANCE = 9;
 
   SOUND_OF_SPEED = 340;
 

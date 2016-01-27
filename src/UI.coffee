@@ -50,7 +50,7 @@ $ ->
   $("#colors").click -> socket.emit("colors")
   $("#play").click ->
     unless TIME_DATA? then return
-    TIME_DATA.wait = 4
+    TIME_DATA.wait = 3
     TIME_DATA.now2 = Date.now()
     console.log "TIME_DATA", TIME_DATA
     socket.emit("play", TIME_DATA)

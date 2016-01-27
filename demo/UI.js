@@ -84,7 +84,7 @@
       if (TIME_DATA == null) {
         return;
       }
-      TIME_DATA.wait = 4;
+      TIME_DATA.wait = 3;
       TIME_DATA.now2 = Date.now();
       console.log("TIME_DATA", TIME_DATA);
       return socket.emit("play", TIME_DATA);
