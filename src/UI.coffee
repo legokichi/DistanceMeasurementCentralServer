@@ -11,20 +11,22 @@ socket.on "reconnect_failed",  console.info.bind(console, "reconnect_failed")
 socket.on "disconnect",        console.info.bind(console, "disconnect")
 socket.on "error",             console.info.bind(console, "error")
 
-WIDTH = 400
-HEIGHT = 400
+WIDTH = 400*2
+HEIGHT = 400*2
 RULED_LINE_INTERVAL = 50
-VS = [0, 0, "VS"]
-points = []
+window["VS"] = [0, 0, "VS"]
+window["points"] = window["points"] = [
+]
 drgTrgPtr = null
 TIME_DATA = null
 
 socket.on "connect",        -> socket.emit("colors")
-socket.on "colors",  (datas)-> points = datas.map ({id, color})-> [Math.random()*(WIDTH-100)+50, Math.random()*(HEIGHT-100)+50, color, id]
+socket.on "colors",  (datas)->console.log "colors", JSON.stringify datas.map ({id, color})-> [Math.random()*(WIDTH-100)+50, Math.random()*(HEIGHT-100)+50, color, id]
 socket.on "repos",   (_TIME_DATA)->
   console.log "repos", _TIME_DATA
   TIME_DATA = _TIME_DATA
-  {pulseTimes, delayTimes, aliases, recStartTimes, now, currentTimes, distances, max_vals} = TIME_DATA
+  {pulseTimes, delayTimes, aliases, recStartTimes, now, currentTimes, distances} = TIME_DATA
+  ###
   ds = Object.keys(delayTimes).map (id1)->
     Object.keys(delayTimes).map (id2)->
       distances[id1][id2]
@@ -40,6 +42,7 @@ socket.on "repos",   (_TIME_DATA)->
   basePt = sdm.points[0]
   points = sdm.points.map (pt, i)->
     [WIDTH/2+(pt.x-basePt.x)*50, HEIGHT/2+(pt.y-basePt.y)*50, aliases[ids[i]], ids[i]]
+  ###
   socket.emit "repos"
 
 $ ->
@@ -81,6 +84,7 @@ main = (_)->
       k = 1/ Math.sqrt(sum)
       _volumes = distancesVS.map (d)-> k / Math.pow(d, a)
       volumes = points.reduce(((o, [x, y, color1, id1], i)-> o[id1] = _volumes[i]; o), {})
+      ###
       _id = null # base volume device id
       _val = Infinity
       Object.keys(volumes).forEach (id1)->
@@ -101,7 +105,8 @@ main = (_)->
           i++
           weight += (TIME_DATA.max_vals[id1][id2] * TIME_DATA.distances[id1][id2]) / (TIME_DATA.max_vals[id0][id2] * TIME_DATA.distances[id0][id2])
         console.log id0, id1, weight, i
-        volumes[id1] *= weight/i
+      volumes[id1] *= weight/i
+      ###
       socket.emit("volume", volumes)
     _.background(255)
     # 罫線

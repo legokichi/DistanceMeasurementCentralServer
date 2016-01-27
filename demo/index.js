@@ -37,6 +37,10 @@
     return socket.emit("colors");
   });
 
+  socket.on("reload", function() {
+    return location.reload();
+  });
+
   window.onerror = function(err) {
     var pre, textnode;
     console.error(err, err != null ? err.stack : void 0);
@@ -247,13 +251,15 @@
   };
 
   play = function(data) {
-    var currentTimes, delayTimes, id, now, now2, offsetTime, pulseTimes, recStartTimes, wait;
+    var currentTimes, delayTimes, id, length, now, now2, offsetTime, pulseTimes, recStartTimes, wait;
     wait = data.wait, pulseTimes = data.pulseTimes, delayTimes = data.delayTimes, id = data.id, currentTimes = data.currentTimes, recStartTimes = data.recStartTimes, now = data.now, now2 = data.now2;
     offsetTime = recStartTimes[socket.id] + (pulseTimes[socket.id][id] - delayTimes[socket.id][id]) + (currentTimes[id] - (pulseTimes[id][id] + recStartTimes[id])) + (now2 - now) / 1000 + wait;
+    length = 12;
     return osc.createAudioBufferFromURL("./TellYourWorld1min.mp3").then(function(abuf) {
       var node;
       node = osc.createAudioNodeFromAudioBuffer(abuf);
-      node.start(offsetTime + 1);
+      node.start(offsetTime);
+      node.stop(offsetTime + 3);
       node.loop = false;
       return node.connect(gain);
     });

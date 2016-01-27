@@ -48,6 +48,9 @@
 
   io.of('/node').on('connection', function(socket) {
     socket.on('disconnect', console.info.bind(console, "disconnect"));
+    socket.on("reload", function() {
+      return io.of("/node").emit("reload");
+    });
     return socket.on("colors", function(data) {
       console.log(io.of("/node"));
       return requestParallel(io.of('/node'), "color").then(function(datas) {
@@ -148,8 +151,6 @@
       return requestParallel(io.of('/ui'), "repos", datas[0]);
     }).then(function() {
       return console.info("end");
-    }).then(function() {
-      return setTimeout(start);
     })["catch"](function(err) {
       return console.error(err, err.stack);
     });

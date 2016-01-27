@@ -27,6 +27,7 @@ app.get '/start', (req, res)->
 
 io.of('/node').on 'connection', (socket)->
   socket.on 'disconnect', console.info.bind(console, "disconnect")
+  socket.on "reload", -> io.of("/node").emit "reload"
   socket.on "colors", (data)-> console.log(io.of("/node")); requestParallel(io.of('/node'), "color").then (datas)-> io.of('/ui').emit("colors", datas)
 
 io.of('/calc').on 'connection', (socket)->
@@ -85,7 +86,7 @@ start = ->
   .then (datas)-> requestParallel io.of('/calc'), "calc", datas
   .then (datas)-> requestParallel io.of('/ui'), "repos", datas[0]
   .then -> console.info "end"
-  .then -> setTimeout start
+  #.then -> setTimeout start
   .catch (err)-> console.error err, err.stack
 
 

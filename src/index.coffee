@@ -24,7 +24,7 @@ socket.on "disconnect",        console.info.bind(console, "disconnect")
 socket.on "error",             console.info.bind(console, "error")
 socket.on "echo",              console.info.bind(console, "echo")
 socket.on "connect",           -> socket.emit("colors")
-
+socket.on "reload", -> location.reload()
 # error logger
 window.onerror = (err)->
   console.error(err, err?.stack)
@@ -139,9 +139,16 @@ play = (data)->
   ) + (
     currentTimes[id] - (pulseTimes[id][id] + recStartTimes[id])
   ) + (now2 - now)/1000 + wait
+
+  length = 12
+  #seed = "111000011001".split("").map(Number)
+  #mseq = Signal.mseqGen(length, seed)
+  #matched = Signal.BPSK([1..1000].map(->1), 440, actx.sampleRate, 0)
+  #abuf_ = osc.createAudioBufferFromArrayBuffer(matched, actx.sampleRate)
   osc.createAudioBufferFromURL("./TellYourWorld1min.mp3").then (abuf)->
     node = osc.createAudioNodeFromAudioBuffer(abuf)
-    node.start(offsetTime+1)
+    node.start(offsetTime)
+    node.stop(offsetTime+3)
     node.loop = false
     node.connect(gain)
 
