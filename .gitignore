@@ -3,3 +3,6 @@
 *.gz
 *.dvi
 *.pdf
+*.lof
+*.lot
+*.toc
