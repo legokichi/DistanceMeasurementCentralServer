@@ -20,7 +20,7 @@
 
   socket.on("error", console.info.bind(console, "error"));
 
-  MULTIPASS_DISTANCE = 5;
+  MULTIPASS_DISTANCE = 7;
 
   SOUND_OF_SPEED = 340;
 
@@ -65,9 +65,6 @@
           rawdata = section = recF32arr.subarray(startPtr, stopPtr);
           correlA = Signal.fft_smart_overwrap_correlation(rawdata, matchedA);
           correlB = Signal.fft_smart_overwrap_correlation(rawdata, matchedB);
-          __frame.view(section, "section");
-          __frame.view(correlA, "correlA");
-          __frame.view(correlB, "correlB");
           ref = Signal.Statictics.findMax(correlA), _ = ref[0], idxA = ref[1];
           ref1 = Signal.Statictics.findMax(correlB), _ = ref1[0], idxB = ref1[1];
           relB = idxA + matchedA.length * 2;
@@ -117,13 +114,9 @@
           marker[idxB - range] = 255;
           marker[idxB] = 255;
           marker[idxB + range] = 255;
-          __frame.view(marker, "marker");
           zoomA = correlA.subarray(idxA - range, idxA + range);
           zoomB = correlB.subarray(idxB - range, idxB + range);
-          __frame.view(zoomA, "zoomA");
-          __frame.view(zoomB, "zoomB");
           correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB);
-          __frame.view(correl, "correl");
           zoom = zoomA.map(function(_, i) {
             return zoomA[i] * zoomB[i];
           });
@@ -138,9 +131,7 @@
             logs[i] = val;
             i += slidewidth;
           }
-          __frame.view(logs, "logs");
           _logs = Signal.lowpass(logs, sampleRate, 800, 1);
-          __frame.view(_logs, "logs(lowpass)");
           ref2 = Signal.Statictics.findMax(_logs), max = ref2[0], _idx = ref2[1];
           i = 1;
           while (i < _idx && _logs[i] < max / 5) {
@@ -152,7 +143,6 @@
           idx = i;
           marker = new Uint8Array(logs.length);
           marker[idx] = 255;
-          __frame.view(marker, "marker");
           max_offset = idx + (idxA - range);
           pulseTime = (startPtr + max_offset) / sampleRate;
           max_val = (maxA + maxB) / 2;
@@ -258,6 +248,7 @@
         distances: distances,
         max_vals: max_vals
       });
+      socket.emit("log", TIME_DATA);
       return next(TIME_DATA);
     };
   };

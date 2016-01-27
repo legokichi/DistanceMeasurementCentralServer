@@ -35,10 +35,12 @@ socket.on "repos",   (_TIME_DATA)->
   sdm.step() while K++ < 200
   console.info("calcRelPos", sdm.det())
   console.table(sdm.points)
+  socket.emit("log", {det: sdm.det(), points: sdm.points})
   # relpos
   basePt = sdm.points[0]
   points = sdm.points.map (pt, i)->
     [WIDTH/2+(pt.x-basePt.x)*50, HEIGHT/2+(pt.y-basePt.y)*50, aliases[ids[i]], ids[i]]
+  socket.emit "repos"
 
 $ ->
   $("#start").click ->  socket.emit("start"); document.body.style.backgroundColor = "white"

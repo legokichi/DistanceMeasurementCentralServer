@@ -4,12 +4,15 @@ express = require('express')
 app = express()
 server = require('http').Server(app)
 io = require('socket.io')(server)
+fs = require("fs")
 logs = []
 log = ->
   logs.push(Array::slice.call(arguments).join("\t"))
   console.log.apply(console, arguments)
 
-
+logging = (str)->
+  console.log("______LOG______", str)
+  fs.appendFile './datalog.log', str+"\n",'utf8', (err) -> if err then console.log "______LOG______", err
 
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
@@ -21,6 +24,7 @@ io.of('/node').on 'connection', (socket)->
   socket.on "colors", (data)-> console.log(io.of("/node")); requestParallel(io.of('/node'), "color").then (datas)-> io.of('/ui').emit("colors", datas)
 
 io.of('/calc').on 'connection', (socket)->
+  socket.on "log", (data)-> logging("CALC"+":"+JSON.stringify(data))
   socket.on 'disconnect', console.info.bind(console, "disconnect")
 
 io.of('/ui').on 'connection', (socket)->
@@ -29,6 +33,8 @@ io.of('/ui').on 'connection', (socket)->
   socket.on "start",        -> console.log("ui:start->server:start");            start()
   socket.on "play",   (data)-> console.log("ui:play->node:play");                io.of('/node').emit("play", data)
   socket.on "colors", (data)-> console.log("ui:colors->node:colors->ui:colors"); requestParallel(io.of('/node'), "color").then (datas)-> socket.emit("colors", datas)
+  socket.on "log", (data)-> logging("UI"+":"+JSON.stringify(data))
+
 
 server.listen(8083)
 
@@ -52,6 +58,7 @@ server.listen(8083)
 
 n = (a)-> a.split("").map(Number)
 start = ->
+  logging("START:"+new Date()+"")
   console.log "started"
   Promise.resolve()
   .then -> requestParallel io.of('/node'), "ready", {length: 10, seedA: n("0010000001"), seedB: n("0011111111"), carrier_freq: 4410}
@@ -72,6 +79,7 @@ start = ->
   .then (datas)-> requestParallel io.of('/calc'), "calc", datas
   .then (datas)-> requestParallel io.of('/ui'), "repos", datas[0]
   .then -> console.info "end"
+  .then -> setTimeout start
   .catch (err)-> console.error err, err.stack
 
 

@@ -24,7 +24,6 @@ socket.on "disconnect",        console.info.bind(console, "disconnect")
 socket.on "error",             console.info.bind(console, "error")
 socket.on "echo",              console.info.bind(console, "echo")
 socket.on "connect",           -> socket.emit("colors")
-socket.on "reconnect_attempt", -> location.reload()
 
 # error logger
 window.onerror = (err)->

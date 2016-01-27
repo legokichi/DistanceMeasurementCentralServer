@@ -37,10 +37,6 @@
     return socket.emit("colors");
   });
 
-  socket.on("reconnect_attempt", function() {
-    return location.reload();
-  });
-
   window.onerror = function(err) {
     var pre, textnode;
     console.error(err, err != null ? err.stack : void 0);

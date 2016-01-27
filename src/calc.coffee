@@ -11,7 +11,7 @@ socket.on "reconnect_failed",  console.info.bind(console, "reconnect_failed")
 socket.on "disconnect",        console.info.bind(console, "disconnect")
 socket.on "error",             console.info.bind(console, "error")
 
-MULTIPASS_DISTANCE = 5
+MULTIPASS_DISTANCE = 7
 SOUND_OF_SPEED = 340
 
 socket.on "calc", (a)-> calc(a) (a)-> socket.emit("calc", a)
@@ -36,9 +36,9 @@ calc = (datas)-> (next)->
       rawdata = section = recF32arr.subarray(startPtr, stopPtr)
       correlA = Signal.fft_smart_overwrap_correlation(rawdata, matchedA)
       correlB = Signal.fft_smart_overwrap_correlation(rawdata, matchedB)
-      __frame.view section, "section"
-      __frame.view correlA, "correlA"
-      __frame.view correlB, "correlB"
+      #__frame.view section, "section"
+      #__frame.view correlA, "correlA"
+      #__frame.view correlB, "correlB"
       [_, idxA] = Signal.Statictics.findMax(correlA)
       [_, idxB] = Signal.Statictics.findMax(correlB)
       relB = idxA+matchedA.length*2; if relB < 0 then relB = 0; # Bの位置とAから見たBの位置
@@ -74,15 +74,15 @@ calc = (datas)-> (next)->
       marker[idxB-range] = 255
       marker[idxB] = 255
       marker[idxB+range] = 255
-      __frame.view marker,"marker"
+      #__frame.view marker,"marker"
       # 最大値付近を切り取り
       zoomA = correlA.subarray(idxA-range, idxA+range)
       zoomB = correlB.subarray(idxB-range, idxB+range)
-      __frame.view zoomA, "zoomA"
-      __frame.view zoomB, "zoomB"
+      #__frame.view zoomA, "zoomA"
+      #__frame.view zoomB, "zoomB"
       # 位置が一致するように微調整
       correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB)
-      __frame.view correl, "correl"
+      #__frame.view correl, "correl"
 
       # 区間に分けて相関値を探索
       # パルス位置は上記の通りを一致させてあるので AとBの区間において相互相関[0] の位置の相関値を調べグラフ化
@@ -95,9 +95,9 @@ calc = (datas)-> (next)->
         val = zoom.subarray(i, i + windowsize).reduce(((sum, v, i)-> sum + v), 0)
         logs[i] = val
         i += slidewidth
-      __frame.view logs, "logs"
+      #__frame.view logs, "logs"
       _logs = Signal.lowpass(logs, sampleRate, 800, 1)
-      __frame.view _logs, "logs(lowpass)"
+      #__frame.view _logs, "logs(lowpass)"
       [max, _idx] = Signal.Statictics.findMax(_logs)
       i = 1
       i++ while i < _idx && _logs[i] < max/5
@@ -105,7 +105,7 @@ calc = (datas)-> (next)->
       idx = i
       marker = new Uint8Array(logs.length)
       marker[idx] = 255
-      __frame.view marker, "marker"
+      #__frame.view marker, "marker"
       max_offset = idx + (idxA - range)
       pulseTime = (startPtr + max_offset) / sampleRate
       max_val = (maxA + maxB)/2
@@ -162,6 +162,7 @@ calc = (datas)-> (next)->
 
   document.body.style.backgroundColor = "lime"
   console.log "TIME_DATA", TIME_DATA = {pulseTimes, delayTimes, aliases, recStartTimes, now, currentTimes, id: results[0].id, distances, max_vals}
+  socket.emit("log", TIME_DATA)
   next(TIME_DATA)
 
 

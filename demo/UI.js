@@ -67,10 +67,15 @@
     }
     console.info("calcRelPos", sdm.det());
     console.table(sdm.points);
+    socket.emit("log", {
+      det: sdm.det(),
+      points: sdm.points
+    });
     basePt = sdm.points[0];
-    return points = sdm.points.map(function(pt, i) {
+    points = sdm.points.map(function(pt, i) {
       return [WIDTH / 2 + (pt.x - basePt.x) * 50, HEIGHT / 2 + (pt.y - basePt.y) * 50, aliases[ids[i]], ids[i]];
     });
+    return socket.emit("repos");
   });
 
   $(function() {
