@@ -4,7 +4,7 @@
   "description": "",
   "main": "demo/server.js",
   "scripts": {
-    "start": "coffee -w -c -o demo src/*.coffee & supervisor demo/server.js",
+    "start": "coffee -w -c -o demo src/*.coffee & tsc -w -p src/*.ts & supervisor demo/server.js",
     "stop": "killall -- node /Users",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
