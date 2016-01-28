@@ -86,7 +86,7 @@ start = ->
   .then (datas)-> requestParallel io.of('/calc'), "calc", datas
   .then (datas)-> requestParallel io.of('/ui'), "repos", datas[0]
   .then -> console.info "end"
-  #.then -> setTimeout start
+  .then -> setTimeout start
   .catch (err)-> console.error err, err.stack
 
 

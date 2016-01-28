@@ -142,7 +142,6 @@
     var carrier_freq, length, seedA, seedB;
     length = arg.length, seedA = arg.seedA, seedB = arg.seedB, carrier_freq = arg.carrier_freq;
     return function(next) {
-      var matchedA, matchedB, mseqA, mseqB, signal;
       document.body.style.backgroundColor = location.hash.slice(1);
       recbuf = new RecordBuffer(actx.sampleRate, processor.bufferSize, processor.channelCount);
       isRecording = false;
@@ -150,23 +149,21 @@
       pulseStopTime = {};
       DSSS_SPEC = null;
       __nextTick__ = null;
-      mseqA = Signal.mseqGen(length, seedA);
-      mseqB = Signal.mseqGen(length, seedB);
-      matchedA = Signal.BPSK(mseqA, carrier_freq, actx.sampleRate, 0);
-      matchedB = Signal.BPSK(mseqB, carrier_freq, actx.sampleRate, 0);
-      signal = new Float32Array(matchedA.length * 2 + matchedB.length);
-      signal.set(matchedA, 0);
-      signal.set(matchedB, matchedA.length * 2);
-      return osc.createBarkerCodedChirp(13, 8).then(function(chirp) {
-        var abuf;
-        abuf = osc.createAudioBufferFromArrayBuffer(chirp, actx.sampleRate);
+      return osc.createBarkerCodedChirp(13, 10, 8).then(function(chirp) {
+        var abuf, matchedA, matchedB, signal;
+        matchedA = chirp;
+        matchedB = chirp;
+        signal = new Float32Array(matchedA.length * 2 + matchedB.length);
+        signal.set(matchedA, 0);
+        signal.set(matchedB, matchedA.length * 2);
+        abuf = osc.createAudioBufferFromArrayBuffer(signal, actx.sampleRate);
         DSSS_SPEC = {
           abuf: abuf,
           length: length,
           seedA: seedA,
           seedB: seedB,
           carrier_freq: carrier_freq,
-          chirp: chirp
+          chirp: chirp.buffer
         };
         return next();
       });

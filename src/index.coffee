@@ -79,17 +79,16 @@ ready      = ({length, seedA, seedB, carrier_freq})-> (next)->
   pulseStopTime  = {}
   DSSS_SPEC = null
   __nextTick__ = null
-  mseqA = Signal.mseqGen(length, seedA)
-  mseqB = Signal.mseqGen(length, seedB)
-  matchedA = Signal.BPSK(mseqA, carrier_freq, actx.sampleRate, 0)
-  matchedB = Signal.BPSK(mseqB, carrier_freq, actx.sampleRate, 0)
-  signal = new Float32Array(matchedA.length*2 + matchedB.length)
-  signal.set(matchedA, 0)
-  signal.set(matchedB, matchedA.length*2)
-
-  osc.createBarkerCodedChirp(13, 8).then (chirp)->
-    abuf = osc.createAudioBufferFromArrayBuffer(chirp, actx.sampleRate)
-    DSSS_SPEC = {abuf, length, seedA, seedB, carrier_freq, chirp}
+  osc.createBarkerCodedChirp(13, 10, 8).then (chirp)->
+    #mseqA = Signal.mseqGen(length, seedA)
+    #mseqB = Signal.mseqGen(length, seedB)
+    matchedA = chirp#Signal.BPSK(mseqA, carrier_freq, actx.sampleRate, 0)
+    matchedB = chirp#Signal.BPSK(mseqB, carrier_freq, actx.sampleRate, 0)
+    signal = new Float32Array(matchedA.length*2 + matchedB.length)
+    signal.set(matchedA, 0)
+    signal.set(matchedB, matchedA.length*2)
+    abuf = osc.createAudioBufferFromArrayBuffer(signal, actx.sampleRate)
+    DSSS_SPEC = {abuf, length, seedA, seedB, carrier_freq, chirp:chirp.buffer}
     next()
 
 startRec   = (next)-> isRecording = true; __nextTick__ = -> __nextTick__ = null; next()

@@ -21,12 +21,13 @@ calc = (datas)-> (next)->
   frame = _craetePictureFrame "calc", document.body
   aliases = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
   results = datas.map ({id, alias, startStops, recF32arr, DSSS_SPEC, sampleRate})->
-    {length, seedA, seedB, carrier_freq} = DSSS_SPEC
+    {length, seedA, seedB, carrier_freq, chirp} = DSSS_SPEC
     _frame = _craetePictureFrame "#{alias}@#{id}"; frame.add _frame.element
-    mseqA = Signal.mseqGen(length, seedA)
-    mseqB = Signal.mseqGen(length, seedB)
-    matchedA = Signal.BPSK(mseqA, carrier_freq, sampleRate, 0)
-    matchedB = Signal.BPSK(mseqB, carrier_freq, sampleRate, 0)
+    #mseqA = Signal.mseqGen(length, seedA)
+    #mseqB = Signal.mseqGen(length, seedB)
+    chirp = new Float32Array(chirp)
+    matchedA = chirp#Signal.BPSK(mseqA, carrier_freq, sampleRate, 0)
+    matchedB = chirp#Signal.BPSK(mseqB, carrier_freq, sampleRate, 0)
     recF32arr = new Float32Array(recF32arr)
     console.log recF32arr.length, alias
     _results = startStops.map ({id: _id, startPtr, stopPtr})->

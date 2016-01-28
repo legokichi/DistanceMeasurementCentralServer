@@ -45,15 +45,14 @@
         return o;
       }), {});
       results = datas.map(function(arg) {
-        var DSSS_SPEC, _frame, _results, alias, carrier_freq, id, length, matchedA, matchedB, mseqA, mseqB, recF32arr, sampleRate, seedA, seedB, startStops;
+        var DSSS_SPEC, _frame, _results, alias, carrier_freq, chirp, id, length, matchedA, matchedB, recF32arr, sampleRate, seedA, seedB, startStops;
         id = arg.id, alias = arg.alias, startStops = arg.startStops, recF32arr = arg.recF32arr, DSSS_SPEC = arg.DSSS_SPEC, sampleRate = arg.sampleRate;
-        length = DSSS_SPEC.length, seedA = DSSS_SPEC.seedA, seedB = DSSS_SPEC.seedB, carrier_freq = DSSS_SPEC.carrier_freq;
+        length = DSSS_SPEC.length, seedA = DSSS_SPEC.seedA, seedB = DSSS_SPEC.seedB, carrier_freq = DSSS_SPEC.carrier_freq, chirp = DSSS_SPEC.chirp;
         _frame = _craetePictureFrame(alias + "@" + id);
         frame.add(_frame.element);
-        mseqA = Signal.mseqGen(length, seedA);
-        mseqB = Signal.mseqGen(length, seedB);
-        matchedA = Signal.BPSK(mseqA, carrier_freq, sampleRate, 0);
-        matchedB = Signal.BPSK(mseqB, carrier_freq, sampleRate, 0);
+        chirp = new Float32Array(chirp);
+        matchedA = chirp;
+        matchedB = chirp;
         recF32arr = new Float32Array(recF32arr);
         console.log(recF32arr.length, alias);
         _results = startStops.map(function(arg1) {
