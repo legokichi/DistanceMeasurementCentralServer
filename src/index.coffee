@@ -84,10 +84,11 @@ ready      = ({length, seedA, seedB, carrier_freq})-> (next)->
     #mseqB = Signal.mseqGen(length, seedB)
     matchedA = chirp#Signal.BPSK(mseqA, carrier_freq, actx.sampleRate, 0)
     matchedB = chirp#Signal.BPSK(mseqB, carrier_freq, actx.sampleRate, 0)
-    signal = new Float32Array(matchedA.length*2 + matchedB.length)
-    signal.set(matchedA, 0)
-    signal.set(matchedB, matchedA.length*2)
-    abuf = osc.createAudioBufferFromArrayBuffer(signal, actx.sampleRate)
+    #signal = new Float32Array(matchedA.length*2 + matchedB.length)
+    #signal.set(matchedA, 0)
+    #signal.set(matchedB, matchedA.length*2)
+    #abuf = osc.createAudioBufferFromArrayBuffer(signal, actx.sampleRate)
+    abuf = osc.createAudioBufferFromArrayBuffer(chirp, actx.sampleRate)
     DSSS_SPEC = {abuf, length, seedA, seedB, carrier_freq, chirp:chirp.buffer}
     next()
 

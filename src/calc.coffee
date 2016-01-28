@@ -35,12 +35,12 @@ calc = (datas)-> (next)->
       __frame = _craetePictureFrame "#{aliases[id]}<->#{aliases[_id]}"; _frame.add __frame.element
       rawdata = section = recF32arr.subarray(startPtr, stopPtr)
       correlA = Signal.fft_smart_overwrap_correlation(rawdata, matchedA)
-      correlB = Signal.fft_smart_overwrap_correlation(rawdata, matchedB)
+      #correlB = Signal.fft_smart_overwrap_correlation(rawdata, matchedB)
       __frame.view section, "section"
       __frame.view correlA, "correlA"
-      __frame.view correlB, "correlB"
+      #__frame.view correlB, "correlB"
       [_, idxA] = Signal.Statictics.findMax(correlA)
-      [_, idxB] = Signal.Statictics.findMax(correlB)
+      #[_, idxB] = Signal.Statictics.findMax(correlB)
       relB = idxA+matchedA.length*2; if relB < 0 then relB = 0; # Bの位置とAから見たBの位置
       relA = idxB-matchedA.length*2; if relA < 0 then relA = 0; # Aの位置とBから見たAの位置
       stdscoreA = do ->
