@@ -14,19 +14,17 @@ socket.on "error",             console.info.bind(console, "error")
 WIDTH = 400*2
 HEIGHT = 400*2
 RULED_LINE_INTERVAL = 50
-window["VS"] = [0, 0, "VS"]
-window["points"] = window["points"] = [
-]
+VS = window["VS"] = [0, 0, "VS"]
+points = window["points"] = []
 drgTrgPtr = null
 TIME_DATA = null
 
 socket.on "connect",        -> socket.emit("colors")
-socket.on "colors",  (datas)->console.log "colors", JSON.stringify datas.map ({id, color})-> [Math.random()*(WIDTH-100)+50, Math.random()*(HEIGHT-100)+50, color, id]
+socket.on "colors",  (datas)-> points = datas.map ({id, color})-> [Math.random()*(WIDTH-100)+50, Math.random()*(HEIGHT-100)+50, color, id]
 socket.on "repos",   (_TIME_DATA)->
   console.log "repos", _TIME_DATA
   TIME_DATA = _TIME_DATA
-  {pulseTimes, delayTimes, aliases, recStartTimes, now, currentTimes, distances} = TIME_DATA
-  ###
+  {pulseTimes, delayTimes, aliases, recStartTimes, now, currentTimes, distances, max_vals} = TIME_DATA
   ds = Object.keys(delayTimes).map (id1)->
     Object.keys(delayTimes).map (id2)->
       distances[id1][id2]
@@ -42,7 +40,6 @@ socket.on "repos",   (_TIME_DATA)->
   basePt = sdm.points[0]
   points = sdm.points.map (pt, i)->
     [WIDTH/2+(pt.x-basePt.x)*50, HEIGHT/2+(pt.y-basePt.y)*50, aliases[ids[i]], ids[i]]
-  ###
   socket.emit "repos"
 
 $ ->
@@ -50,7 +47,7 @@ $ ->
   $("#colors").click -> socket.emit("colors")
   $("#play").click ->
     unless TIME_DATA? then return
-    TIME_DATA.wait = 3
+    TIME_DATA.wait = 4
     TIME_DATA.now2 = Date.now()
     console.log "TIME_DATA", TIME_DATA
     socket.emit("play", TIME_DATA)

@@ -142,7 +142,7 @@
     var carrier_freq, length, seedA, seedB;
     length = arg.length, seedA = arg.seedA, seedB = arg.seedB, carrier_freq = arg.carrier_freq;
     return function(next) {
-      var abuf, matchedA, matchedB, mseqA, mseqB, signal;
+      var matchedA, matchedB, mseqA, mseqB, signal;
       document.body.style.backgroundColor = location.hash.slice(1);
       recbuf = new RecordBuffer(actx.sampleRate, processor.bufferSize, processor.channelCount);
       isRecording = false;
@@ -157,15 +157,19 @@
       signal = new Float32Array(matchedA.length * 2 + matchedB.length);
       signal.set(matchedA, 0);
       signal.set(matchedB, matchedA.length * 2);
-      abuf = osc.createAudioBufferFromArrayBuffer(signal, actx.sampleRate);
-      DSSS_SPEC = {
-        abuf: abuf,
-        length: length,
-        seedA: seedA,
-        seedB: seedB,
-        carrier_freq: carrier_freq
-      };
-      return next();
+      return osc.createBarkerCodedChirp(13, 8).then(function(chirp) {
+        var abuf;
+        abuf = osc.createAudioBufferFromArrayBuffer(chirp, actx.sampleRate);
+        DSSS_SPEC = {
+          abuf: abuf,
+          length: length,
+          seedA: seedA,
+          seedB: seedB,
+          carrier_freq: carrier_freq,
+          chirp: chirp
+        };
+        return next();
+      });
     };
   };
 
@@ -251,15 +255,13 @@
   };
 
   play = function(data) {
-    var currentTimes, delayTimes, id, length, now, now2, offsetTime, pulseTimes, recStartTimes, wait;
+    var currentTimes, delayTimes, id, now, now2, offsetTime, pulseTimes, recStartTimes, wait;
     wait = data.wait, pulseTimes = data.pulseTimes, delayTimes = data.delayTimes, id = data.id, currentTimes = data.currentTimes, recStartTimes = data.recStartTimes, now = data.now, now2 = data.now2;
     offsetTime = recStartTimes[socket.id] + (pulseTimes[socket.id][id] - delayTimes[socket.id][id]) + (currentTimes[id] - (pulseTimes[id][id] + recStartTimes[id])) + (now2 - now) / 1000 + wait;
-    length = 12;
     return osc.createAudioBufferFromURL("./TellYourWorld1min.mp3").then(function(abuf) {
       var node;
       node = osc.createAudioNodeFromAudioBuffer(abuf);
       node.start(offsetTime);
-      node.stop(offsetTime + 10);
       node.loop = false;
       return node.connect(gain);
     });

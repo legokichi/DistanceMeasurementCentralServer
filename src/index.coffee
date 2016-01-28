@@ -86,9 +86,11 @@ ready      = ({length, seedA, seedB, carrier_freq})-> (next)->
   signal = new Float32Array(matchedA.length*2 + matchedB.length)
   signal.set(matchedA, 0)
   signal.set(matchedB, matchedA.length*2)
-  abuf = osc.createAudioBufferFromArrayBuffer(signal, actx.sampleRate)
-  DSSS_SPEC = {abuf, length, seedA, seedB, carrier_freq}
-  next()
+
+  osc.createBarkerCodedChirp(13, 8).then (chirp)->
+    abuf = osc.createAudioBufferFromArrayBuffer(chirp, actx.sampleRate)
+    DSSS_SPEC = {abuf, length, seedA, seedB, carrier_freq, chirp}
+    next()
 
 startRec   = (next)-> isRecording = true; __nextTick__ = -> __nextTick__ = null; next()
 startPulse = (id)-> (next)-> pulseStartTime[id] = actx.currentTime; next()
@@ -140,7 +142,7 @@ play = (data)->
     currentTimes[id] - (pulseTimes[id][id] + recStartTimes[id])
   ) + (now2 - now)/1000 + wait
 
-  length = 12
+  #length = 12
   #seed = "111000011001".split("").map(Number)
   #mseq = Signal.mseqGen(length, seed)
   #matched = Signal.BPSK([1..1000].map(->1), 440, actx.sampleRate, 0)
@@ -148,7 +150,7 @@ play = (data)->
   osc.createAudioBufferFromURL("./TellYourWorld1min.mp3").then (abuf)->
     node = osc.createAudioNodeFromAudioBuffer(abuf)
     node.start(offsetTime)
-    node.stop(offsetTime+10)
+    #node.stop(offsetTime+10)
     node.loop = false
     node.connect(gain)
 
