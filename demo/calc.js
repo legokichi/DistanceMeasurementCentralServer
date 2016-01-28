@@ -26,7 +26,10 @@
 
   socket.on("calc", function(a) {
     return calc(a)(function(a) {
-      return socket.emit("calc", a);
+      socket.emit("calc", a);
+      return setTimeout((function() {
+        return location.reload();
+      }), 2000);
     });
   });
 
@@ -107,8 +110,8 @@
           } else {
             idxB = relB;
           }
-          maxA = correlA[idxA];
-          maxB = correlB[idxB];
+          console.log(maxA = correlA[idxA]);
+          console.log(maxB = correlB[idxB]);
           marker = new Uint8Array(correlA.length);
           marker[idxA - range] = 255;
           marker[idxA] = 255;

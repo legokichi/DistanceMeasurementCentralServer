@@ -151,6 +151,8 @@
       return requestParallel(io.of('/ui'), "repos", datas[0]);
     }).then(function() {
       return console.info("end");
+    }).then(function() {
+      return setTimeout(start);
     })["catch"](function(err) {
       return console.error(err, err.stack);
     });

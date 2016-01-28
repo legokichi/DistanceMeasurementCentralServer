@@ -13,7 +13,7 @@ socket.on "error",             console.info.bind(console, "error")
 MULTIPASS_DISTANCE = 9
 SOUND_OF_SPEED = 340
 
-socket.on "calc", (a)-> calc(a) (a)-> socket.emit("calc", a)
+socket.on "calc", (a)-> calc(a) (a)-> socket.emit("calc", a); setTimeout (-> location.reload()),2000
 
 calc = (datas)-> (next)->
   if datas.length is 0 then return next()
@@ -65,8 +65,8 @@ calc = (datas)-> (next)->
         #[_, idx] = Signal.Statictics.findMax(correlB.subarray(relB-range, relB+range))
         idxB = relB# - range + idx
       # 音圧ピーク値
-      maxA = correlA[idxA]
-      maxB = correlB[idxB]
+      console.log maxA = correlA[idxA]
+      console.log maxB = correlB[idxB]
       marker = new Uint8Array(correlA.length)
       marker[idxA-range] = 255
       marker[idxA] = 255
