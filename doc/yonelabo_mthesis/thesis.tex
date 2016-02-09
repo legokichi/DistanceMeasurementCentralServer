@@ -1,90 +1,107 @@
 \documentclass[11pt]{jreport}
 %\documentclass[11pt,twoside]{jreport} %印刷に出すときは両面見開きにするかな
+
 \usepackage{fancyhdr}
-\usepackage{graphicx}
+%\usepackage{graphicx}
+\usepackage[dvipdfmx]{graphicx}
+%\usepackage[dvipdfm]{graphicx,color}
 \usepackage{epsf}
 \usepackage{url}
 \usepackage{amsmath}
 \usepackage{amsfonts}
+\usepackage{comment}
 
 \let\origtitle\title
 \let\origauthor\author
+
 \newcommand{\thetitle}{a}
 \newcommand{\theauthor}{a}
 
 \renewcommand{\bibname}{参考文献}
+
 \makeatletter
+
 \renewcommand{\chapter}{%
   \if@openright\cleardoublepage\else\clearpage\fi
   \thispagestyle{fancy}
   \global\@topnum\z@
   \@afterindenttrue
-  \secdef\@chapter\@schapter}
+  \secdef\@chapter\@schapter
+}
+
 \makeatother
 
- \pagestyle{fancy}
- \fancyhead{}
-  \rhead{\footnotesize\thepage}
-  \lhead{\footnotesize\leftmark}
-  \chead{\footnotesize\rightmark}
-  \cfoot{}
-  \renewcommand{\chaptermark}[1]{\markboth{第\ \normalfont\thechapter\ 章~#1}{}}
-  \renewcommand{\sectionmark}[1]{\markright{\thesection #1}{}}
+\pagestyle{fancy}
+
+\fancyhead{}
+\rhead{\footnotesize\thepage}
+\lhead{\footnotesize\leftmark}
+\chead{\footnotesize\rightmark}
+\cfoot{}
+
+\renewcommand{\chaptermark}[1]{\markboth{第\ \normalfont\thechapter\ 章~#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection #1}{}}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\footrulewidth}{0.4pt}
 \renewcommand{\title}[1]{\lfoot{\footnotesize{#1}\origtitle{#1}}\renewcommand{\thetitle}{#1}}
 \renewcommand{\author}[1]{\rfoot{\footnotesize{#1}\origauthor{#1}}\renewcommand{\theauthor}{#1}}
-%\lhead[{\footnotesize\hspace{1em}\thepage\hspace{2em}\rightmark}]{}
-%\rhead[]{{\footnotesize\hspace{1em}\leftmark\hspace{2em}\thepage}} %見開き用
+
+\begin{comment}
+  \lhead[{\footnotesize\hspace{1em}\thepage\hspace{2em}\rightmark}]{}
+  \rhead[]{{\footnotesize\hspace{1em}\leftmark\hspace{2em}\thepage}} %見開き用
+\end{comment}
+
 \newcommand{\athr}[1]{\author{#1}}
 
 
 
 %ここから
-\title{納豆の糸の数え方についての自動糸追跡手法に関する研究}
-\author{米澤朋子}
+\title{複数の携帯端末による教室空間の空間音響環境構築手法の検討}
+\author{伊納洋佑}
 \date{\today}
+
 \let\origtitle\title
 \let\origauthor\author
 
 \begin{document}
-\thispagestyle{empty}
-\begin{center}
-\huge{平成 26 年度}\\
-\Huge{修 士 論 文 題 目}\\
-\vspace{1.5cm}\huge{\thetitle}\\ \vspace{3.0cm}
-\LARGE{関西大学大学院 総合情報学研究科}\\
-\LARGE{博士前期課程}\\
-\LARGE{知識情報学専攻}\\
-\vspace{0.8cm}\Large{インタラクションの認知・メディア・文化}\\
-\vspace{0.8cm}\LARGE{\theauthor}\\ \vspace{1.0cm}
-\today\vspace{1.5cm}
-\begin{itemize}
-\LARGE{主査\hspace{2cm} 米澤朋子 准教授}\\
-\LARGE{副査\hspace{2cm} 加藤隆 教授}\\
-\LARGE{副査\hspace{2cm} 喜多千草 教授}\\
-\end{itemize}
-\end{center}
+
+  \thispagestyle{empty}
+  \begin{center}
+    \huge{平成 26 年度}\\
+    \Huge{修 士 論 文 題 目}\\
+    \vspace{1.5cm}\huge{\thetitle}\\ \vspace{3.0cm}
+    \LARGE{関西大学大学院 総合情報学研究科}\\
+    \LARGE{博士前期課程}\\
+    \LARGE{知識情報学専攻}\\
+    \vspace{0.8cm}\Large{インタラクションの認知・メディア・文化}\\
+    \vspace{0.8cm}\LARGE{\theauthor}\\ \vspace{1.0cm}
+    \today\vspace{1.5cm}
+    \begin{itemize}
+      \LARGE{主査\hspace{2cm} 米澤朋子 准教授}\\
+      \LARGE{副査\hspace{2cm} 加藤隆 教授}\\
+      \LARGE{副査\hspace{2cm} 喜多千草 教授}\\
+    \end{itemize}
+  \end{center}
 
 
-%もくじ
-\tableofcontents
-\listoftables
-\listoffigures
+  %もくじ
+  \tableofcontents
+  \listoftables
+  \listoffigures
 
 
-%内容
-\input{abst.tex}
-\input{list.tex}
-\input{intro.tex}
-\input{related.tex}
-\input{system.tex}
-\input{exp.tex}
-\input{discus.tex}
-\input{concl.tex}
-%\input{bib.tex}
-\input{ack.tex}
-%\input{apend.tex}
+  %内容
+  \input{abst.tex}
+  \input{list.tex}
+  \input{intro.tex}
+  \input{related.tex}
+  \input{system.tex}
+  \input{exp.tex}
+  \input{discus.tex}
+  \input{concl.tex}
+  \input{bib.tex}
+  \input{ack.tex}
+  \input{apend.tex}
 
 
 

@@ -6,3 +6,5 @@
 *.lof
 *.lot
 *.toc
+uploads
+node_modules
