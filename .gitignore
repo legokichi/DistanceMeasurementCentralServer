@@ -6,5 +6,7 @@
 *.lof
 *.lot
 *.toc
+*.eps
+*.jpeg
 uploads
 node_modules
