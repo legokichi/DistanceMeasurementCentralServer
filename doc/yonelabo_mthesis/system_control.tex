@@ -3,14 +3,14 @@
 同期のためには複数の端末がパルスを出し合わなければならないが，
 いつどの端末がパルスを出すのか\ref{fig:TDMA}，といったスケジューリングをどうするかについて述べる．
 
-\begin{figure}[tb]\centering
+\begin{figure}[p]\centering
   \hspace{-2mm}\includegraphics[clip,width=1.1\hsize]{img/TDMA.png}
   \caption{TDMA}\label{fig:TDMA}
 \end{figure}
 
 図\ref{fig:network2}にシステム全体のネットワーク構成を示す．
 
-\begin{figure}[tb]\centering
+\begin{figure}[p]\centering
   \hspace{-2mm}\includegraphics[clip,width=1.1\hsize]{img/network2.png}
   \caption{ネットワーク構成}\label{fig:network2}
 \end{figure}
@@ -21,7 +21,7 @@
 
 次の図\ref{fig:flowchart}に同期・測距するまでのシステムフローを示す．
 
-\begin{figure}[tb]\centering
+\begin{figure}[p]\centering
   \hspace{-2mm}\includegraphics[clip,width=1.1\hsize]{img/flowchart.png}
   \caption{同期制御フロー}\label{fig:flowchart}
 \end{figure}
@@ -50,7 +50,7 @@ beepPulseは任意の一台の端末に対して，パルスを送信するよ�
 
 仮想音源を配置し制御するための端末のユーザインターフェースを示す(図\ref{fig:relpos})．
 
-\begin{figure}[tb]\centering
+\begin{figure}[p]\centering
   \hspace{-2mm}\includegraphics[clip,width=1.1\hsize]{img/relpos.png}
   \caption{仮想音源配置UI}\label{fig:relpos}
 \end{figure}
@@ -58,3 +58,9 @@ beepPulseは任意の一台の端末に対して，パルスを送信するよ�
 図のように推定した端末の分布図と，仮想音源を表示する．
 仮想音源VSをドラッグすることで，DBAP法によって出力する振幅を計算し，各端末へ振幅を配信することで音像定位する．
 当然，音を鳴らしながら音源を移動させることも可能である．
+
+
+\section{P2Pリングネットワークを使った計算量の削減}
+以前は
+しかしながらパルス同定アルゴリズムのデバッグのしやすさの観点から、各端末に計算を分散して並列化による計算時間を削減するよりも、一台のパソコンで処理したほうが結果が比べやすいという開発上の観点から計算サーバーを導入しています
+また、以前計算が停止した原因は私の書いたプログラムにゼロ除算を含む計算が生じる可能性があたったためで、nexus7でも計算自体は可能です。
