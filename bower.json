@@ -1,0 +1,18 @@
+{
+  "name": "jinshinbaibai",
+  "version": "0.0.0",
+  "description": "jinshinbaibai",
+  "license": "MIT",
+  "dependencies": {
+    "duxca.serverworker.js": "legokichi/ServerWorker",
+    "p2p-ring-net.js": "legokichi/P2PRingNet.js"
+  },
+  "devDependencies": {
+  },
+  "main": "server.coffee",
+  "ignore": [
+    "**/.*",
+    "bower_components",
+    "node_modules"
+  ]
+}

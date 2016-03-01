@@ -1,0 +1,32 @@
+{
+  "name": "jinshinbaibai",
+  "version": "0.0.0",
+  "description": "",
+  "main": "server.coffee",
+  "scripts": {
+    "init": "npm run update; npm run build",
+    "update": "rm -rf bower_components; npm update; bower update",
+    "clean": "rm lib/*.js",
+    "start": "coffee server.coffee & npm run build & npm run watch",
+    "stop": "killall -- node */coffee server.coffee",
+    "build": "npm run clean; coffee    -c -b -o lib src",
+    "watch": "npm run build; coffee -w -c -b -o lib src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/legokichi/jinshinbaibai.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/legokichi/jinshinbaibai/issues"
+  },
+  "homepage": "https://github.com/legokichi/jinshinbaibai/#readme",
+  "dependencies": {
+    "express": "^4.13.4",
+    "peer": "^0.2.8",
+    "socket.io": "^1.4.4"
+  },
+  "devDependencies": {
+  }
+}
