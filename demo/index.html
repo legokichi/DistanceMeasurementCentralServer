@@ -4,11 +4,12 @@
   <meta charset="utf-8" />
   <title>jinshinbaibai</title>
   <script src="/bower_components/peerjs/peer.js"></script>
-  <script src="/bower_components/p2p-ring-net.js/dist/P2PRingNet.js"></script>
+  <script src="/bower_components/jquery/dist/jquery.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/OSC.js"></script>
   <script src="/RecordBuffer.js"></script>
   <script src="/Signal.js"></script>
+  <script src="/P2PRingNet.js"></script>
   <style>
   </style>
   <script src="/lib/main.js"></script>
@@ -22,11 +23,16 @@
   <a href="#red">red</a>
   <a href="#lime">green</a>
   <a href="#blue">blue</a>
-</p>
-<p>
   <a href="#cyan">cyan</a>
   <a href="#magenta">magenta</a>
   <a href="#yellow">yellow</a>
+</p>
+<p>
+  <div>joinNodeId:<span id="joinNodeId"></span></div>
+  <button id="ping">ping</button>
+  <button id="start">start</button>
+  <button id="play">play</button>
+  <button id="reload">reload</button>
 </p>
 </body>
 </html>
