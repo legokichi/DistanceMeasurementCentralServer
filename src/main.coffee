@@ -2,70 +2,45 @@ window.navigator["getUserMedia"] = window.navigator.webkitGetUserMedia ||
                                    window.navigator.mozGetUserMedia    ||
                                    window.navigator.getUserMedia
 
-{Chord} = P2PRingNet
-chord = null
-joinNodeId = null
+socket = null
+_hoge = null
 
 setup = (next)->
   id = location.hash.slice(1)
-  chord = new Chord(id, {host: location.hostname, port: location.port, path: "peerjs", secure: true, debug: 3})
-  window["chord"] = chord
-  joinNodeId = location.search.slice(1)
-  $("#joinNodeId").html(joinNodeId)
-  $("#ping").click ->
-    $("#ping").css("background-color", "yellow")
-    chord.request("ping").then ->
-      $("#ping").css("background-color", "lime")
-  $("#reload").click -> chord.request("reload")
-  $("#start").click -> start(chord)
-  $("#play").click -> play(chord)
-  next()
+  actx = new AudioContext()
+  _hoge = new _Hoge(actx)
+  _hoge.prepareRec -> initSocket -> next()
 
 main = (next)->
-  if joinNodeId
-  then prm = chord.join(joinNodeId)
-  else prm = chord.create()
-  prm
-  .then(initChord)
-  .then(next)
+  next()
 
-initChord = (chord)->
-  chord.on "ping", (token, cb)->
-    console.log(token.payload.event, token.payload.data)
-    cb(token)
-  chord.on "ready",      (token, cb)-> cb()
-  chord.on "startRec",   (token, cb)-> cb()
-  chord.on "startPulse", (token, cb)-> cb()
-  chord.on "beepPulse",  (token, cb)-> cb()
-  chord.on "stopPulse",  (token, cb)-> cb()
-  chord.on "stopRec",    (token, cb)-> cb()
-  chord.on "collect",    (token, cb)-> cb()
-  chord.on "distribute", (token, cb)-> cb()
-  chord.on "play",       (token, cb)-> cb()
-  chord.on "volume",     (token, cb)-> cb()
-  chord.on "reload",     (token, cb)->
-    console.log("aaaa")
-    setTimeout(-> location.reload(), 1000); cb(token)
+initSocket = (next)->
+  window["socket"] = socket = io(location.hostname+":"+location.port+"/")
+  socket.on "connect",           console.info.bind(console, "connect")
+  socket.on "reconnect",         console.info.bind(console, "reconnect")
+  socket.on "reconnect_attempt", console.info.bind(console, "reconnect_attempt")
+  socket.on "reconnecting",      console.info.bind(console, "reconnecting")
+  socket.on "reconnect_error",   console.info.bind(console, "reconnect_error")
+  socket.on "reconnect_failed",  console.info.bind(console, "reconnect_failed")
+  socket.on "disconnect",        console.info.bind(console, "disconnect")
+  socket.on "error",             console.info.bind(console, "error")
 
-start = (chord)->
-  chord.request("ready")
-  .then (token)-> chord.request("startRec", null, token.route)
-  .then (token)->
-    token.payload.addressee.reduce((prm, id)->
-      prm
-      .then (token)-> chord.request("startPulse", id, token.payload.addressee)
-      .then (token)-> chord.request("beepPulse", id, token.payload.addressee)
-      .then (token)-> chord.request("stopPulse", id, token.payload.addressee)
-    , Promise.resolve(token))
-  .then (token)-> chord.request("stopRec", null, token.payload.addressee)
-  .then (token)-> chord.request("collect", {}, token.payload.addressee)
-  .then (token)-> chord.request("distribute", token.payload.data, token.payload.addressee)
-  .then (token)-> chord.request("play", (Date.now()-token.time[0])*1.5/1000+1, token.payload.addressee)
-  .then (token)-> console.info("end")
+  socket.on "ready",      (a)-> _hoge.ready(a)      -> socket.emit("ready")
+  socket.on "startRec",      -> _hoge.startRec      -> socket.emit("startRec")
+  socket.on "startPulse", (a)-> _hoge.startPulse(a) -> socket.emit("startPulse")
+  socket.on "beepPulse",     -> _hoge.beepPulse     -> socket.emit("beepPulse")
+  socket.on "stopPulse",  (a)-> _hoge.stopPulse(a)  -> socket.emit("stopPulse")
+  socket.on "stopRec",       -> _hoge.stopRec       -> socket.emit("stopRec")
+  socket.on "collect",       -> _hoge.collect    (a)-> socket.emit("collect", a)
+  socket.on "distribute", (a)-> _hoge.distribute (a)-> socket.emit("distribute")
+
+  socket.on "play",       (a)-> _hoge.play(a)
+  socket.on "volume",     (a)-> _hoge.volume(a)
+  socket.on "reload",        -> location.reload()
+  next()
 
 
-changeColor = ->
-  document.body.style.backgroundColor = location.hash.slice(1)
+changeColor = -> document.body.style.backgroundColor = location.hash.slice(1)
 
 window.addEventListener "DOMContentLoaded", -> setup -> main -> changeColor()
 window.addEventListener("hashchange", changeColor)

@@ -6,18 +6,18 @@
   <script src="/bower_components/peerjs/peer.js"></script>
   <script src="/bower_components/jquery/dist/jquery.js"></script>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/OSC.js"></script>
   <script src="/RecordBuffer.js"></script>
   <script src="/Signal.js"></script>
-  <script src="/P2PRingNet.js"></script>
+  <script src="/OSC.js"></script>
   <style>
   </style>
+  <script src="/lib/SignalViewer.js"></script>
+  <script src="/lib/Detector.js"></script>
+  <script src="/lib/Hoge.js"></script>
   <script src="/lib/main.js"></script>
-  <script src="/lib/calc.js"></script>
 </head>
 <body>
 <style>
-  a{background-color: white; color: black; padding: 1px; text-decoration: none; border: 1px solid gray; border-radius: 0.2em;}
 </style>
 <p>
   <a href="#red">red</a>
@@ -28,11 +28,9 @@
   <a href="#yellow">yellow</a>
 </p>
 <p>
-  <div>joinNodeId:<span id="joinNodeId"></span></div>
-  <button id="ping">ping</button>
-  <button id="start">start</button>
-  <button id="play">play</button>
-  <button id="reload">reload</button>
+  <a href="/start">start</a>
+  <a href="/play">play</a>
+  <a href="/reload">reload</a>
 </p>
 </body>
 </html>

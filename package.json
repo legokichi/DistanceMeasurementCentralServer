@@ -7,8 +7,8 @@
     "init": "npm run update; npm run build",
     "update": "rm -rf bower_components; npm update; bower update",
     "clean": "rm lib/*.js",
-    "start": "coffee server.coffee & npm run build & npm run watch",
-    "stop": "killall -- node */coffee server.coffee",
+    "start": "supervisor --extensions coffee server.coffee & npm run build & npm run watch",
+    "stop": "killall -- supervisor --extensions coffee --debug server.coffee",
     "build": "npm run clean; coffee    -c -b -o lib src",
     "watch": "npm run build; coffee -w -c -b -o lib src"
   },
@@ -23,10 +23,11 @@
   },
   "homepage": "https://github.com/legokichi/jinshinbaibai/#readme",
   "dependencies": {
+    "body-parser": "^1.15.0",
     "express": "^4.13.4",
+    "formidable": "^1.0.17",
     "peer": "^0.2.8",
     "socket.io": "^1.4.4"
   },
-  "devDependencies": {
-  }
+  "devDependencies": {}
 }
