@@ -9,8 +9,8 @@
     "clean": "rm lib/*.js",
     "start": "supervisor --extensions coffee server.coffee & npm run build & npm run watch",
     "stop": "killall -- supervisor --extensions coffee --debug server.coffee",
-    "build": "npm run clean; coffee    -c -b -o lib src",
-    "watch": "npm run build; coffee -w -c -b -o lib src"
+    "build": "npm run clean; coffee    -c -o lib src",
+    "watch": "npm run build; coffee -w -c -o lib src"
   },
   "repository": {
     "type": "git",

@@ -63,8 +63,11 @@ class this.SignalViewer
         @text("#{key}:"+detail[key], 5, 15 + 10*i)
     @
   drawSpectrogram: (f32arr, opt={})->
+    # FFTには矩形窓使用
     {sampleRate, windowSize, slideWidth, max} = opt
-    arr = f32arr.map (v)-> if isFinite(v) then v else 0
+    f32arr = f32arr.map (v)-> if isFinite(v) then v else 0
+    arr = new Float32Array(f32arr.length + windowSize)
+    arr.set(f32arr, windowSize/2)
     sampleRate ?= 44100
     windowSize ?= Math.pow(2, 8); # spectrgram height
     slideWidth ?= Math.pow(2, 5); # spectrgram width rate

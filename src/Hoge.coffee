@@ -49,31 +49,15 @@ class this._Hoge
     next()
   calc: ->
     f32arr = @recbuf.merge()
-    @detector.calc(f32arr)
-    ###
-    recStartTime = recbuf.sampleTimes[0] - (recbuf.bufferSize / recbuf.sampleRate)
-    recStopTime = recbuf.sampleTimes[recbuf.sampleTimes.length-1]
-    startStops = Object.keys(pulseStartTime).map (id)->
-      startPtr = (pulseStartTime[id] - recStartTime) * recbuf.sampleRate|0
-      stopPtr = (pulseStopTime[id] - recStartTime) * recbuf.sampleRate|0
+    recStartTime = @recbuf.sampleTimes[0] - (@recbuf.bufferSize / @recbuf.sampleRate)
+    recStopTime = @recbuf.sampleTimes[@recbuf.sampleTimes.length-1]
+    startStops = Object.keys(@pulseStartTime).map (id)=>
+      startPtr = (@pulseStartTime[id] - recStartTime) * @recbuf.sampleRate|0
+      stopPtr = (@pulseStopTime[id] - recStartTime) * @recbuf.sampleRate|0
       {id, startPtr, stopPtr}
-    o =
-      id: socket.id
-      recStartTime: recStartTime
-      recStopTime: recStopTime
-      alias: location.hash.slice(1)
-      startStops: startStops
-      pulseStartTime: pulseStartTime
-      pulseStopTime: pulseStopTime
-      sampleTimes: recbuf.sampleTimes
-      sampleRate: actx.sampleRate
-      bufferSize: processor.bufferSize
-      channelCount: processor.channelCount
-      recF32arr: f32arr.buffer
-      DSSS_SPEC: DSSS_SPEC
-      currentTime: actx.currentTime
-    ###
     @recbuf.clear()
+    @detector.calc(f32arr, startStops)
+
   collect: (next)-> next()
   distribute: (next)-> next()
   play: (data)-> console.log "play", data
