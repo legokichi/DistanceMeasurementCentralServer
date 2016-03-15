@@ -104,11 +104,11 @@ stepExperiment = (experimentID, room)-> ->
   .then -> requestParallel(room, "collectRec")
   .then (datas)->
     console.log datas
-    Promise.all datas.map ({id, color, results: {f32arr, startStops}})->
+    Promise.all datas.map ({id, color, results: {f32arr, startStops, sampleRate}})->
       timeStamp = Date.now()
       Promise.all [
         promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.dat", f32arr, cb)
-        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.json", JSON.stringify(startStops), cb)
+        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.json", JSON.stringify({sampleRate, startStops}), cb)
       ]
   .then -> console.info "end"
 catchExperiment = (experimentID, room)-> (err)->

@@ -60,7 +60,9 @@ class this._Hoge
   collect: (next)->
     {f32arr, startStops} = @getTimesAndRawData()
     results = @detector.calc(f32arr, startStops)
-    next({id: socket.id, color: @color, results})
+    id = socket.id
+    color = @color
+    next({id, color, results})
   distribute: (data)=> (next)->
     data # [{id:string, results: [{id, max_offset, pulseTime, max_val}]}]
     data.forEach ({id, results})->
@@ -71,6 +73,6 @@ class this._Hoge
     next()
   collectRec: (next)->
     {f32arr, startStops} = @getTimesAndRawData()
-    next({id: socket.id, color: @color, results: {f32arr, startStops}})
+    next({id: socket.id, color: @color, results: {f32arr:f32arr.buffer, startStops, sampleRate: @actx.sampleRate}})
   play: (data)-> console.log "play", data
   volume: (data)-> console.log "volume", data
