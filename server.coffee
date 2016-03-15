@@ -17,8 +17,17 @@ app.use('/bower_components', express.static(__dirname + '/bower_components'))
 app.use('/lib',              express.static(__dirname + '/lib'))
 app.use('/dist',             express.static(__dirname + '/dist'))
 
-app.get '/start', (req, res)->
-  res.statusCode = 204; res.send(); start()
+app.get '/barker', (req, res)->
+  res.statusCode = 204; res.send(); start({pulseType: "barker", seed: n("0010000001"), carrierFreq: 4410})
+
+app.get '/chirp', (req, res)->
+  res.statusCode = 204; res.send(); start({pulseType: "chirp"})
+
+app.get '/barkerCodedChirp', (req, res)->
+  res.statusCode = 204; res.send(); start({pulseType: "barkerCodedChirp"})
+
+app.get '/mseq', (req, res)->
+  res.statusCode = 204; res.send(); start({pulseType: "mseq", length: 10, seedA: n("0010000001"), seedB: n("0011111111"), carrierFreq: 4410})
 
 app.get '/reload', (req, res)->
   res.statusCode = 204; res.send(); io.of("/").emit("reload")
@@ -52,11 +61,11 @@ server.listen(__PORT_NUMBER__)
 # length:  6, seed: n("0010001")
 
 n = (a)-> a.split("").map(Number)
-start = ->
+start = (data)->
   room = io.of("/")
   console.log "started"
   Promise.resolve()
-  .then -> requestParallel(room, "ready", {pulseType: "mseq", length: 10, seedA: n("0010000001"), seedB: n("0011111111"), carrierFreq: 4410})
+  .then -> requestParallel(room, "ready", data)
   .then -> console.log "sockets", sockets(room).map (socket)-> socket.id
   .then -> requestParallel(room, "startRec")
   .then ->
