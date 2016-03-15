@@ -1,5 +1,6 @@
 __PORT_NUMBER__ = 8083
 
+fs         = require("fs")
 bodyParser = require('body-parser')
 formidable = require('formidable')
 express    = require('express')
@@ -17,23 +18,30 @@ app.use('/bower_components', express.static(__dirname + '/bower_components'))
 app.use('/lib',              express.static(__dirname + '/lib'))
 app.use('/dist',             express.static(__dirname + '/dist'))
 
-app.get '/barker', (req, res)->
-  res.statusCode = 204; res.send(); start({pulseType: "barker", carrierFreq: 4410})
+app.post "/push", (req, res)->
+  form = new formidable.IncomingForm()
+  form.encoding = "utf-8";
+  form.uploadDir = "./uploads"
+  form.parse req, (err, fields, files)->
+    console.info err, fields, files
+    oldPath = './' + files.file._writeStream.path
+    newPath = './uploads/' + Date.now() + "_" + files.file.name
+    fs.rename oldPath, newPath, (err)-> if (err) then throw err;
+  res.statusCode = 204
+  res.send()
 
-app.get '/chirp', (req, res)->
-  res.statusCode = 204; res.send(); start({pulseType: "chirp", length:1024*8})
+start = null
+res204 =  (fn)-> (req, res)-> res.statusCode = 204; res.send(); fn()
+app.get '/ads',    res204 -> start = startADS;        console.log "change ADS mode"
+app.get '/exp',    res204 -> start = startExperiment; console.log "change experiment mode"
+app.get '/all',    res204 -> startAll();
+app.get '/barker', res204 -> start({pulseType: "barker", carrierFreq: 4410})
+app.get '/chirp',  res204 -> start({pulseType: "chirp", length:1024*8})
+app.get '/bchirp', res204 -> start({pulseType: "barkerCodedChirp"})
+app.get '/mseq',   res204 -> start({pulseType: "mseq", length: 10, seedA: n("0010000001"), seedB: n("0011111111"), carrierFreq: 4410})
+app.get '/reload', res204 -> io.of("/").emit("reload")
+app.get '/play',   res204 -> io.of("/").emit("play")
 
-app.get '/barkerCodedChirp', (req, res)->
-  res.statusCode = 204; res.send(); start({pulseType: "barkerCodedChirp"})
-
-app.get '/mseq', (req, res)->
-  res.statusCode = 204; res.send(); start({pulseType: "mseq", length: 10, seedA: n("0010000001"), seedB: n("0011111111"), carrierFreq: 4410})
-
-app.get '/reload', (req, res)->
-  res.statusCode = 204; res.send(); io.of("/").emit("reload")
-
-app.get '/play', (req, res)->
-  res.statusCode = 204; res.send(); io.of("/").emit("play")
 
 io.of("/").on 'connection', (socket)->
   socket.on 'disconnect', console.info.bind(console, "disconnect")
@@ -59,15 +67,73 @@ server.listen(__PORT_NUMBER__)
 # length: 10, seed: n("0101010111")
 # length:  9, seed: n("000100001")
 # length:  6, seed: n("0010001")
-
 n = (a)-> a.split("").map(Number)
-start = (data)->
+
+
+# recording program tools
+
+promisify = (fn)->
+  new Promise (resolve, reject)->
+    fn (err, data)->
+      if err? then reject(err) else resolve(data)
+
+startADS = (data)->
+  # ADS: Autonomous decentralized system
   room = io.of("/")
-  console.log "started"
-  Promise.resolve()
-  .then -> requestParallel(room, "ready", data)
-  .then -> console.log "sockets", sockets(room).map (socket)-> socket.id
-  .then -> requestParallel(room, "startRec")
+  ready(room)(data)
+  .then(record(room))
+  .then(collect_and_distribute(room))
+  .then -> console.info "end"
+  .catch (err)-> console.error err, err.stack
+
+start = startADS
+
+startExperiment = (data)->
+  experimentID = Date.now()
+  room = io.of("/")
+  ready(room)(data)
+  .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}.json", JSON.stringify(data), cb)
+  .then(record(room))
+  .then -> requestParallel(room, "collectRec")
+  .then (datas)->
+    console.log datas
+    Promise.all datas.map ({id, color, results: {f32arr, startStops}})->
+      timeStamp = Date.now()
+      Promise.all [
+        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.dat", f32arr, cb)
+        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.json", JSON.stringify(startStops), cb)
+      ]
+  .then -> console.info "end"
+  .catch (err)->
+    console.error err, err.stack
+    timeStamp = Date.now()
+    promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_error.txt", err, cb)
+
+startAll = ->
+  params = [
+    {pulseType: "barker", carrierFreq: 4410}
+    {pulseType: "chirp", length:1024*8}
+    {pulseType: "barkerCodedChirp"}
+    {pulseType: "mseq", length: 10, seedA: n("0010000001"), seedB: n("0011111111"), carrierFreq: 4410}
+  ]
+  applicative = (arr, fn)->
+    foldable = arr.map (data, i)-> -> fn(data, i)
+    return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
+  prm = applicative params, (param, i)->
+      console.log param, i
+      applicative [1..10], (j)->
+        console.log i, j
+        startExperiment(param)
+  prm.then ->
+    console.log "all task finished"
+
+
+ready = (room)-> (data)->
+  console.log "ready"
+  requestParallel(room, "ready", data)
+record = (room)-> ->
+  console.log "start"
+  requestParallel(room, "startRec")
   .then ->
     foldable = sockets(room).map (socket)-> ->
       Promise.resolve()
@@ -77,10 +143,13 @@ start = (data)->
       .then -> requestParallel(room, "stopPulse", socket.id)
     return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
   .then -> requestParallel(room, "stopRec")
-  .then -> requestParallel(room, "collect")
+collect_and_distribute = (room)-> ->
+  console.log "collect_and_distribute"
+  requestParallel(room, "collect")
   .then (a)-> requestParallel(room, "distribute", a)
-  .then -> console.info "end"
-  .catch (err)-> console.error err, err.stack
+
+
+# socket.io tools
 
 sockets = (room)->
   Object.keys(room.sockets).map (key)-> room.sockets[key]

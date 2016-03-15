@@ -10,13 +10,15 @@ socket = null
 _hoge = null
 
 setup = (next)->
-  id = location.hash.slice(1)
+  color = location.hash.slice(1)
   actx = new AudioContext()
-  _hoge = new _Hoge(actx)
+  _hoge = new _Hoge(actx, color)
   _hoge.prepareRec -> initSocket -> next()
   socket = io(location.hostname+":"+location.port+"/")
-  window["socket"] = actx
+  window["actx"] = actx
   window["socket"] = socket
+  window.addEventListener "hashchange", ->
+    _hoge.color = document.body.style.backgroundColor = location.hash.slice(1)
 
 main = (next)->
   next()
@@ -31,6 +33,8 @@ initSocket = (next)->
   socket.on "disconnect",        console.info.bind(console, "disconnect")
   socket.on "error",             console.info.bind(console, "error")
 
+  socket.on "connect", -> $("#socketId").html socket.id
+
   socket.on "ready",      (a)-> _hoge.ready(a)      -> socket.emit("ready")
   socket.on "startRec",      -> _hoge.startRec      -> socket.emit("startRec")
   socket.on "startPulse", (a)-> _hoge.startPulse(a) -> socket.emit("startPulse")
@@ -39,6 +43,7 @@ initSocket = (next)->
   socket.on "stopRec",       -> _hoge.stopRec       -> socket.emit("stopRec")
   socket.on "collect",       -> _hoge.collect    (a)-> socket.emit("collect", a)
   socket.on "distribute", (a)-> _hoge.distribute(a) -> socket.emit("distribute")
+  socket.on "collectRec",    -> _hoge.collectRec (a)-> socket.emit("collectRec", a)
 
   socket.on "play",       (a)-> _hoge.play(a)
   socket.on "volume",     (a)-> _hoge.volume(a)
@@ -46,7 +51,4 @@ initSocket = (next)->
   next()
 
 
-changeColor = -> document.body.style.backgroundColor = location.hash.slice(1)
-
 window.addEventListener "DOMContentLoaded", -> setup -> main -> changeColor()
-window.addEventListener("hashchange", changeColor)
