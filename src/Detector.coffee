@@ -1,5 +1,6 @@
 SignalViewer = window["SignalViewer"]
 Signal = window["Signal"]
+OSC = window["duxca"]["lib"]["OSC"]
 
 MULTIPASS_DISTANCE = 9
 SOUND_OF_SPEED = 340
@@ -16,8 +17,26 @@ class this.Detector
     {pulseType} = data
     @pulseType = pulseType
     switch @pulseType
-      when "mseq" then @init_mseq(data, next)
-      else             throw new Error "uknown pulse type #{pulseType}"
+      when "barker"           then @init_barker(data, next)
+      when "chirp"            then @init_chirp(data, next)
+      when "barkerCodedChirp" then @init_barkerCodedChirp(data, next)
+      when "mseq"             then @init_mseq(data, next)
+      else                         throw new Error "uknown pulse type #{pulseType}"
+  init_barker: ({carrierFreq}, next)->
+    barker = Signal.createBarkerCode(13)
+    @matchedA = Signal.BPSK(barker, carrierFreq, @actx.sampleRate, 0)
+    @abuf = @osc.createAudioBufferFromArrayBuffer(@matchedA, @actx.sampleRate)
+    next()
+  init_chirp: ({length}, next)->
+    chirp = Signal.createChirpSignal(length)
+    @matchedA = chirp
+    @abuf = @osc.createAudioBufferFromArrayBuffer(@matchedA, @actx.sampleRate)
+    next()
+  init_barkerCodedChirp: (_, next)->
+    bcc = Signal.createBarkerCodedChirp(13)
+    @matchedA = bcc
+    @abuf = @osc.createAudioBufferFromArrayBuffer(@matchedA, @actx.sampleRate)
+    next()
   init_mseq: ({length, seedA, seedB, carrierFreq}, next)->
     mseqA = Signal.mseqGen(length, seedA)
     mseqB = Signal.mseqGen(length, seedB)
@@ -45,10 +64,36 @@ class this.Detector
     new SignalViewer(f32arr.length/slideWidth, windowSize/2).draw(f32arr).appendTo(document.body)
     new SignalViewer(1024, 256).drawSpectrogram(f32arr, {sampleRate, windowSize, slideWidth}).appendTo(document.body)
     results = switch @pulseType
-      when "mseq" then startStops.map(@calc_mseq(f32arr, sampleRate))
-      else             throw new Error "uknown pulse type #{pulseType}"
-    console.table results
-
+      when "barker"           then startStops.map(@calc_barker(f32arr, sampleRate))
+      when "chirp"            then startStops.map(@calc_chirp(f32arr, sampleRate))
+      when "barkerCodedChirp" then startStops.map(@calc_barkerCodedChirp(f32arr, sampleRate))
+      when "mseq"             then startStops.map(@calc_mseq(f32arr, sampleRate))
+      else                         throw new Error "uknown pulse type #{pulseType}"
+    results
+  calc_barker: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
+    frame = craetePictureFrame "#{socket.id}<->#{id}", document.body
+    correlA = Signal.fft_smart_overwrap_correlation(rawdata, @matchedA)
+    frame.view rawdata, "rawdata"
+    frame.view correlA, "correlA"
+    [maxA, idxA] = Signal.Statictics.findMax(correlA)
+    range = (MULTIPASS_DISTANCE/SOUND_OF_SPEED*sampleRate)|0
+    marker = new Uint8Array(correlA.length)
+    marker[idxA-range] = 255
+    marker[idxA] = 255
+    marker[idxA+range] = 255
+    frame.view marker, "marker"
+    # 最大値付近を切り取り
+    zoomA = correlA.subarray(idxA-range, idxA+range)
+    frame.view zoomA, "zoomA"
+    max_offset = idxA
+    pulseTime = (startPtr + max_offset) / sampleRate
+    max_val = maxA
+    {id, max_offset, pulseTime, max_val}
+  calc_chirp: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
+    @calc_barker(rawdata, sampleRate)({id, startPtr, stopPtr})
+  calc_barkerCodedChirp: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
+    @calc_barker(rawdata, sampleRate)({id, startPtr, stopPtr})
+    {id, max_offset, pulseTime, max_val}
   calc_mseq: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
     frame = craetePictureFrame "#{socket.id}<->#{id}", document.body
     correlA = Signal.fft_smart_overwrap_correlation(rawdata, @matchedA)

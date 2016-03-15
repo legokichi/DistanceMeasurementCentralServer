@@ -18,10 +18,10 @@ app.use('/lib',              express.static(__dirname + '/lib'))
 app.use('/dist',             express.static(__dirname + '/dist'))
 
 app.get '/barker', (req, res)->
-  res.statusCode = 204; res.send(); start({pulseType: "barker", seed: n("0010000001"), carrierFreq: 4410})
+  res.statusCode = 204; res.send(); start({pulseType: "barker", carrierFreq: 4410})
 
 app.get '/chirp', (req, res)->
-  res.statusCode = 204; res.send(); start({pulseType: "chirp"})
+  res.statusCode = 204; res.send(); start({pulseType: "chirp", length:1024*8})
 
 app.get '/barkerCodedChirp', (req, res)->
   res.statusCode = 204; res.send(); start({pulseType: "barkerCodedChirp"})
@@ -78,7 +78,7 @@ start = (data)->
     return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
   .then -> requestParallel(room, "stopRec")
   .then -> requestParallel(room, "collect")
-  .then -> requestParallel(room, "distribute")
+  .then (a)-> requestParallel(room, "distribute", a)
   .then -> console.info "end"
   .catch (err)-> console.error err, err.stack
 

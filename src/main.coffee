@@ -1,7 +1,11 @@
-window.navigator["getUserMedia"] = window.navigator.webkitGetUserMedia ||
-                                   window.navigator.mozGetUserMedia    ||
-                                   window.navigator.getUserMedia
+_Hoge = window["_Hoge"]
+io    = window["io"]
 
+window.navigator["getUserMedia"] = window.navigator.getUserMedia       ||
+                                   window.navigator.mozGetUserMedia    ||
+                                   window.navigator.webkitGetUserMedia
+
+actx = null
 socket = null
 _hoge = null
 
@@ -10,12 +14,14 @@ setup = (next)->
   actx = new AudioContext()
   _hoge = new _Hoge(actx)
   _hoge.prepareRec -> initSocket -> next()
+  socket = io(location.hostname+":"+location.port+"/")
+  window["socket"] = actx
+  window["socket"] = socket
 
 main = (next)->
   next()
 
 initSocket = (next)->
-  window["socket"] = socket = io(location.hostname+":"+location.port+"/")
   socket.on "connect",           console.info.bind(console, "connect")
   socket.on "reconnect",         console.info.bind(console, "reconnect")
   socket.on "reconnect_attempt", console.info.bind(console, "reconnect_attempt")
@@ -32,7 +38,7 @@ initSocket = (next)->
   socket.on "stopPulse",  (a)-> _hoge.stopPulse(a)  -> socket.emit("stopPulse")
   socket.on "stopRec",       -> _hoge.stopRec       -> socket.emit("stopRec")
   socket.on "collect",       -> _hoge.collect    (a)-> socket.emit("collect", a)
-  socket.on "distribute", (a)-> _hoge.distribute (a)-> socket.emit("distribute")
+  socket.on "distribute", (a)-> _hoge.distribute(a) -> socket.emit("distribute")
 
   socket.on "play",       (a)-> _hoge.play(a)
   socket.on "volume",     (a)-> _hoge.volume(a)

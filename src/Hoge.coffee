@@ -1,5 +1,5 @@
-RecordBuffer = window["RecordBuffer"]
-Detector = window["Detector"]
+RecordBuffer = window["duxca"]["lib"]["RecordBuffer"]
+Detector     = window["Detector"]
 
 class this._Hoge
   constructor: (actx)->
@@ -15,6 +15,7 @@ class this._Hoge
     @gain.connect(@actx.destination)
     @recbuf = new RecordBuffer(@actx.sampleRate, @processor.bufferSize, @processor.channelCount)
     @detector = new Detector(@actx)
+    @results = null
   audioprocess: (ev)->
     if @isRecording
       @recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], @actx.currentTime)
@@ -56,9 +57,16 @@ class this._Hoge
       stopPtr = (@pulseStopTime[id] - recStartTime) * @recbuf.sampleRate|0
       {id, startPtr, stopPtr}
     @recbuf.clear()
-    @detector.calc(f32arr, startStops)
-
-  collect: (next)-> next()
-  distribute: (next)-> next()
+    @results = @detector.calc(f32arr, startStops)
+  collect: (next)->
+    next({id: socket.id, results: @results})
+  distribute: (data)=> (next)->
+    data # [{id:string, results: [{id, max_offset, pulseTime, max_val}]}]
+    data.forEach ({id, results})->
+      console.group(id)
+      console.log(id)
+      console.table(results)
+      console.groupEnd(id)
+    next()
   play: (data)-> console.log "play", data
   volume: (data)-> console.log "volume", data
