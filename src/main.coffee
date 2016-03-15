@@ -17,8 +17,9 @@ setup = (next)->
   socket = io(location.hostname+":"+location.port+"/")
   window["actx"] = actx
   window["socket"] = socket
-  window.addEventListener "hashchange", ->
+  do changeColor = ->
     _hoge.color = document.body.style.backgroundColor = location.hash.slice(1)
+  window.addEventListener "hashchange", changeColor
 
 main = (next)->
   next()
@@ -51,4 +52,4 @@ initSocket = (next)->
   next()
 
 
-window.addEventListener "DOMContentLoaded", -> setup -> main -> changeColor()
+window.addEventListener "DOMContentLoaded", -> setup -> main -> console.log "init main"

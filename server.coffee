@@ -79,6 +79,7 @@ promisify = (fn)->
 
 startADS = (data)->
   # ADS: Autonomous decentralized system
+  console.log "startADS"
   room = io.of("/")
   ready(room)(data)
   .then(record(room))
@@ -87,13 +88,19 @@ startADS = (data)->
   .catch (err)-> console.error err, err.stack
 
 start = startADS
+experimentID = Date.now()
 
 startExperiment = (data)->
+  console.log "startExperiment"
   experimentID = Date.now()
   room = io.of("/")
   ready(room)(data)
   .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}.json", JSON.stringify(data), cb)
-  .then(record(room))
+  .then(stepExperiment(experimentID, room))
+  .catch(catchExperiment(experimentID, room))
+stepExperiment = (experimentID, room)-> ->
+  Promise.resolve()
+  .then -> record(room)()
   .then -> requestParallel(room, "collectRec")
   .then (datas)->
     console.log datas
@@ -104,12 +111,14 @@ startExperiment = (data)->
         promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.json", JSON.stringify(startStops), cb)
       ]
   .then -> console.info "end"
-  .catch (err)->
-    console.error err, err.stack
-    timeStamp = Date.now()
-    promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_error.txt", err, cb)
+catchExperiment = (experimentID, room)-> (err)->
+  console.error err, err.stack
+  timeStamp = Date.now()
+  promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_error.txt", err, cb)
 
 startAll = ->
+  console.log "startAll"
+  room = io.of("/")
   params = [
     {pulseType: "barker", carrierFreq: 4410}
     {pulseType: "chirp", length:1024*8}
@@ -119,20 +128,25 @@ startAll = ->
   applicative = (arr, fn)->
     foldable = arr.map (data, i)-> -> fn(data, i)
     return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
-  prm = applicative params, (param, i)->
-      console.log param, i
+  applicative params, (data, i)->
+    experimentID = Date.now()
+    {pulseType} = data
+    console.log experimentID, pulseType, data, i
+    ready(room)(data)
+    .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{pulseType}.json", JSON.stringify(data), cb)
+    .then ->
+      step = stepExperiment(experimentID, room)
+      console.log experimentID, "wrote"
       applicative [1..10], (j)->
         console.log i, j
-        startExperiment(param)
-  prm.then ->
+        step()
+  .then ->
     console.log "all task finished"
-
+  .catch(catchExperiment(experimentID, room))
 
 ready = (room)-> (data)->
-  console.log "ready"
   requestParallel(room, "ready", data)
 record = (room)-> ->
-  console.log "start"
   requestParallel(room, "startRec")
   .then ->
     foldable = sockets(room).map (socket)-> ->
@@ -144,7 +158,6 @@ record = (room)-> ->
     return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
   .then -> requestParallel(room, "stopRec")
 collect_and_distribute = (room)-> ->
-  console.log "collect_and_distribute"
   requestParallel(room, "collect")
   .then (a)-> requestParallel(room, "distribute", a)
 
