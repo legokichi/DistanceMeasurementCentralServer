@@ -114,14 +114,14 @@ stepExperiment = (experimentID, room)-> ->
     Promise.all datas.map ({id, color, results: {wave, startStops, sampleRate}})->
       timeStamp = Date.now()
       Promise.all [
-        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.wav", wave, cb)
-        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.json", JSON.stringify({sampleRate, startStops}), cb)
+        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_#{color}_#{id}.wav", wave, cb)
+        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_#{color}_#{id}.json", JSON.stringify({sampleRate, startStops}), cb)
       ]
   .then -> console.info "end"
 catchExperiment = (experimentID, room)-> (err)->
   console.error err, err.stack
   timeStamp = Date.now()
-  promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_error.txt", err, cb)
+  promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_error.txt", "#{err.message}\n#{err.stack}\n", cb)
 
 startAll = ->
   console.log "startAll"
