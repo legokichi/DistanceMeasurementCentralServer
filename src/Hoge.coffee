@@ -1,4 +1,5 @@
 RecordBuffer = window["duxca"]["lib"]["RecordBuffer"]
+Wave         = window["duxca"]["lib"]["Wave"]
 Detector     = window["Detector"]
 
 class this._Hoge
@@ -47,18 +48,17 @@ class this._Hoge
   stopRec: (next)->
     @isRecording = false
     next()
-  getTimesAndRawData: ->
-    f32arr = @recbuf.merge()
+  getStartStops: ->
     recStartTime = @recbuf.sampleTimes[0] - (@recbuf.bufferSize / @recbuf.sampleRate)
     recStopTime = @recbuf.sampleTimes[@recbuf.sampleTimes.length-1]
     startStops = Object.keys(@pulseStartTime).map (id)=>
       startPtr = (@pulseStartTime[id] - recStartTime) * @recbuf.sampleRate|0
       stopPtr = (@pulseStopTime[id] - recStartTime) * @recbuf.sampleRate|0
       {id, startPtr, stopPtr}
-    @recbuf.clear()
-    {f32arr, startStops}
+    startStops
   collect: (next)->
-    {f32arr, startStops} = @getTimesAndRawData()
+    startStops = @getStartStops()
+    f32arr = @recbuf.merge()
     results = @detector.calc(f32arr, startStops)
     id = socket.id
     color = @color
@@ -72,7 +72,11 @@ class this._Hoge
       console.groupEnd(id)
     next()
   collectRec: (next)->
-    {f32arr, startStops} = @getTimesAndRawData()
-    next({id: socket.id, color: @color, results: {f32arr:f32arr.buffer, startStops, sampleRate: @actx.sampleRate}})
+    startStops = @getStartStops()
+    int16arr = @recbuf.toPCM()
+    sampleRate = @actx.sampleRate
+    wave = new Wave(1, sampleRate, int16arr).toBlob()
+    @recbuf.clear()
+    next({id: socket.id, color: @color, results: {wave, startStops, sampleRate}})
   play: (data)-> console.log "play", data
   volume: (data)-> console.log "volume", data

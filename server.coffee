@@ -97,11 +97,12 @@ start = startADS
 experimentID = Date.now()
 
 startExperiment = (data)->
-  console.log "startExperiment"
+  {pulseType} = data
+  console.log "startExperiment", pulseType
   experimentID = Date.now()
   room = io.of("/")
   ready(room)(data)
-  .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}.json", JSON.stringify(data), cb)
+  .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{pulseType}.json", JSON.stringify(data), cb)
   .then(stepExperiment(experimentID, room))
   .catch(catchExperiment(experimentID, room))
 stepExperiment = (experimentID, room)-> ->
@@ -110,10 +111,11 @@ stepExperiment = (experimentID, room)-> ->
   .then -> requestParallel(room, "collectRec")
   .then (datas)->
     console.log datas
-    Promise.all datas.map ({id, color, results: {f32arr, startStops, sampleRate}})->
+    Promise.all datas.map ({id, color, results: {wave, startStops, sampleRate}})->
+      console.log Object.prototype.toString.call(wave)
       timeStamp = Date.now()
       Promise.all [
-        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.dat", f32arr, cb)
+        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.wav", wave, cb)
         promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.json", JSON.stringify({sampleRate, startStops}), cb)
       ]
   .then -> console.info "end"
