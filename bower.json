@@ -5,7 +5,6 @@
   "license": "MIT",
   "dependencies": {
     "duxca.serverworker.js": "legokichi/ServerWorker",
-    "p2p-ring-net.js": "legokichi/P2PRingNet.js",
     "jquery": "^2.2.1",
     "Signal.ts": "legokichi/Signal.ts",
     "duxca.lib.js": "legokichi/duxca.lib.js"
