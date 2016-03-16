@@ -61,8 +61,8 @@ class this.Detector
     sampleRate ?= @actx.sampleRate
     windowSize = Math.pow(2, 8) # 周波数分解能
     slideWidth = Math.pow(2, 4) # 時間分解能
-    new SignalViewer(f32arr.length/slideWidth, windowSize/2).draw(f32arr).appendTo(document.body)
-    new SignalViewer(1024, 256).drawSpectrogram(f32arr, {sampleRate, windowSize, slideWidth}).appendTo(document.body)
+    #new SignalViewer(f32arr.length/slideWidth, windowSize/2).draw(f32arr, {sampleRate}).appendTo(document.body)
+    #new SignalViewer(1024, 256).drawSpectrogram(f32arr, {sampleRate, windowSize, slideWidth}).appendTo(document.body)
     results = switch @pulseType
       when "barker"           then startStops.map(@calc_barker(f32arr, sampleRate))
       when "chirp"            then startStops.map(@calc_chirp(f32arr, sampleRate))
@@ -93,7 +93,6 @@ class this.Detector
     @calc_barker(rawdata, sampleRate)({id, startPtr, stopPtr})
   calc_barkerCodedChirp: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
     @calc_barker(rawdata, sampleRate)({id, startPtr, stopPtr})
-    {id, max_offset, pulseTime, max_val}
   calc_mseq: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
     frame = craetePictureFrame "#{socket.id}<->#{id}", document.body
     correlA = Signal.fft_smart_overwrap_correlation(rawdata, @matchedA)

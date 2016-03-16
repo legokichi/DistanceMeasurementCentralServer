@@ -112,7 +112,6 @@ stepExperiment = (experimentID, room)-> ->
   .then (datas)->
     console.log datas
     Promise.all datas.map ({id, color, results: {wave, startStops, sampleRate}})->
-      console.log Object.prototype.toString.call(wave)
       timeStamp = Date.now()
       Promise.all [
         promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{color}_#{id}_#{timeStamp}.wav", wave, cb)
