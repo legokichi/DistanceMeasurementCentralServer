@@ -72,8 +72,9 @@ class this.Detector
     results
   calc_barker: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
     frame = craetePictureFrame "#{socket.id}<->#{id}", document.body
-    correlA = Signal.fft_smart_overwrap_correlation(rawdata, @matchedA)
-    frame.view rawdata, "rawdata"
+    section = rawdata.subarray(startPtr, stopPtr)
+    correlA = Signal.fft_smart_overwrap_correlation(section, @matchedA)
+    frame.view section, "section"
     frame.view correlA, "correlA"
     [maxA, idxA] = Signal.Statictics.findMax(correlA)
     range = (MULTIPASS_DISTANCE/SOUND_OF_SPEED*sampleRate)|0
