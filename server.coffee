@@ -34,13 +34,19 @@ start = null
 res204 =  (fn)-> (req, res)-> res.statusCode = 204; res.send(); fn()
 app.get '/ads',    res204 -> start = startADS;        console.log "change ADS mode"
 app.get '/exp',    res204 -> start = startExperiment; console.log "change experiment mode"
+
 app.get '/all',    res204 -> startAll();
+
 app.get '/barker', res204 -> start({pulseType: "barker", carrierFreq: 4410})
 app.get '/chirp',  res204 -> start({pulseType: "chirp", length:1024*8})
 app.get '/bchirp', res204 -> start({pulseType: "barkerCodedChirp"})
 app.get '/mseq',   res204 -> start({pulseType: "mseq", length: 10, seedA: n("0010000001"), seedB: n("0011111111"), carrierFreq: 4410})
+
 app.get '/reload', res204 -> io.of("/").emit("reload")
 app.get '/play',   res204 -> io.of("/").emit("play")
+
+app.get '/sockets', (req, res)->
+  res.json sockets(io.of("/")).map (a)-> a.id
 
 
 io.of("/").on 'connection', (socket)->

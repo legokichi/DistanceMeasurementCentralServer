@@ -34,7 +34,10 @@ initSocket = (next)->
   socket.on "disconnect",        console.info.bind(console, "disconnect")
   socket.on "error",             console.info.bind(console, "error")
 
-  socket.on "connect", -> $("#socketId").html socket.id
+  socket.on "connect",         -> $("#socketId").html(socket.id); $("body").css({"background-color": location.hash.slice(1)}).append("<pre>connect</pre>")
+  socket.on "reconnect",       -> $("#socketId").html(socket.id); $("body").css({"background-color": location.hash.slice(1)}).append("<pre>reconnect</pre>")
+  socket.on "disconnect",      -> $("#socketId").html(socket.id); $("body").css({"background-color": "lightgray"}).append("<pre>disconnect</pre>")
+  socket.on "error",      (err)-> console.error(err);             $("body").css({"background-color": "lightgray"}).append("<pre>#{err}</pre>")
 
   socket.on "ready",      (a)-> _hoge.ready(a)      -> socket.emit("ready")
   socket.on "startRec",      -> _hoge.startRec      -> socket.emit("startRec")
@@ -53,3 +56,13 @@ initSocket = (next)->
 
 
 window.addEventListener "DOMContentLoaded", -> setup -> main -> console.log "init main"
+window.addEventListener "error", (ev)->
+  err = ev.error
+  console.error err
+  pre = $("<pre />")
+  .append("<br>"+err)
+  .append("<br>"+err.message)
+  .append("<br>"+err.stack)
+  $("body")
+  .css({"background-color": "gray"})
+  .append(pre)
