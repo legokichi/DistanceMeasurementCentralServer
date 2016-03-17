@@ -6,9 +6,11 @@ formidable = require('formidable')
 express    = require('express')
 http       = require('http')
 socket     = require('socket.io')
+php        = require("node-php")
 app        = express()
 server     = http.Server(app)
 io         = socket(server)
+
 
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
@@ -17,25 +19,23 @@ app.use('/',                 express.static(__dirname + '/demo'))
 app.use('/bower_components', express.static(__dirname + '/bower_components'))
 app.use('/lib',              express.static(__dirname + '/lib'))
 app.use('/dist',             express.static(__dirname + '/dist'))
+app.use("/php",                     php.cgi(__dirname + "/php"))
 
 app.post "/push", (req, res)->
   form = new formidable.IncomingForm()
-  form.encoding = "utf-8";
+  form.encoding = "utf-8"
   form.uploadDir = "./uploads"
   form.parse req, (err, fields, files)->
     console.info err, fields, files
     oldPath = './' + files.file._writeStream.path
     newPath = './uploads/' + Date.now() + "_" + files.file.name
-    fs.rename oldPath, newPath, (err)-> if (err) then throw err;
+    fs.rename oldPath, newPath, (err)-> if (err) then throw err
   res.statusCode = 204
   res.send()
 
-start = null
 res204 =  (fn)-> (req, res)-> res.statusCode = 204; res.send(); fn()
-app.get '/ads',    res204 -> start = startADS;        console.log "change ADS mode"
-app.get '/exp',    res204 -> start = startExperiment; console.log "change experiment mode"
 
-app.get '/all',    res204 -> startAll();
+app.get '/all',    res204 -> startAll()
 
 app.get '/barker', res204 -> start({pulseType: "barker", carrierFreq: 4410})
 app.get '/chirp',  res204 -> start({pulseType: "chirp", length:1024*8})
@@ -50,7 +50,8 @@ app.get '/sockets', (req, res)->
 
 
 io.of("/").on 'connection', (socket)->
-  socket.on 'disconnect', console.info.bind(console, "disconnect")
+  console.log "connection", socket.id
+  socket.on 'disconnect', console.info.bind(console, "disconnect", socket.id)
   socket.on "echo",       socket.emit.bind(socket, "echo")
   socket.on "volume",     (data)-> io.of('/').emit("volume", data)
 
@@ -83,31 +84,22 @@ promisify = (fn)->
     fn (err, data)->
       if err? then reject(err) else resolve(data)
 
-startADS = (data)->
-  # ADS: Autonomous decentralized system
-  console.log "startADS"
-  room = io.of("/")
-  ready(room)(data)
-  .then(record(room))
-  .then(collect_and_distribute(room))
-  .then -> console.info "end"
-  .catch (err)-> console.error err, err.stack
-
-start = startADS
-experimentID = Date.now()
-
-startExperiment = (data)->
+start = (data)->
   {pulseType} = data
-  console.log "startExperiment", pulseType
+  console.log "start", pulseType
   experimentID = Date.now()
   room = io.of("/")
-  ready(room)(data)
+  requestParallel(room, "ready", data)
   .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{pulseType}.json", JSON.stringify(data), cb)
-  .then(stepExperiment(experimentID, room))
+  .then(record(room))
+  .then(collectRec(experimentID, room))
+  .then -> requestParallel(room, "collect")
+  .then (a)-> requestParallel(room, "distribute", a)
+  .then -> console.info "end"
   .catch(catchExperiment(experimentID, room))
-stepExperiment = (experimentID, room)-> ->
+
+collectRec = (experimentID, room)-> ->
   Promise.resolve()
-  .then -> record(room)()
   .then -> requestParallel(room, "collectRec")
   .then (datas)->
     console.log datas
@@ -117,7 +109,7 @@ stepExperiment = (experimentID, room)-> ->
         promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_#{color}_#{id}.wav", wave, cb)
         promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_#{color}_#{id}.json", JSON.stringify({sampleRate, startStops}), cb)
       ]
-  .then -> console.info "end"
+
 catchExperiment = (experimentID, room)-> (err)->
   console.error err, err.stack
   timeStamp = Date.now()
@@ -126,6 +118,7 @@ catchExperiment = (experimentID, room)-> (err)->
 startAll = ->
   console.log "startAll"
   room = io.of("/")
+  experimentID = null
   params = [
     {pulseType: "barker", carrierFreq: 4410}
     {pulseType: "chirp", length:1024*8}
@@ -139,20 +132,20 @@ startAll = ->
     experimentID = Date.now()
     {pulseType} = data
     console.log experimentID, pulseType, data, i
-    ready(room)(data)
+    requestParallel(room, "ready", data)
     .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{pulseType}.json", JSON.stringify(data), cb)
+    .then(record(room))
     .then ->
-      step = stepExperiment(experimentID, room)
+      step = collectRec(experimentID, room)
       console.log experimentID, "wrote"
       applicative [1..10], (j)->
         console.log i, j
         step()
+        .then -> console.info "end"
   .then ->
     console.log "all task finished"
   .catch(catchExperiment(experimentID, room))
 
-ready = (room)-> (data)->
-  requestParallel(room, "ready", data)
 record = (room)-> ->
   requestParallel(room, "startRec")
   .then ->
@@ -164,9 +157,6 @@ record = (room)-> ->
       .then -> requestParallel(room, "stopPulse", socket.id)
     return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
   .then -> requestParallel(room, "stopRec")
-collect_and_distribute = (room)-> ->
-  requestParallel(room, "collect")
-  .then (a)-> requestParallel(room, "distribute", a)
 
 
 # socket.io tools
