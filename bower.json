@@ -7,7 +7,8 @@
     "duxca.serverworker.js": "legokichi/ServerWorker",
     "jquery": "^2.2.1",
     "Signal.ts": "legokichi/Signal.ts",
-    "duxca.lib.js": "legokichi/duxca.lib.js"
+    "duxca.lib.js": "legokichi/duxca.lib.js",
+    "jszip": "^2.5.0"
   },
   "devDependencies": {},
   "main": "server.coffee",
