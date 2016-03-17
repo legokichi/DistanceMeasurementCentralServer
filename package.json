@@ -9,7 +9,7 @@
     "clean": "rm lib/*.js",
     "start": "supervisor --extensions coffee server.coffee & npm run build & npm run watch",
     "stop": "killall -- supervisor --extensions coffee --debug server.coffee",
-    "build": "npm run clean; coffee    -c -o lib src",
+    "build": "coffee    -c -o lib src",
     "watch": "npm run build; coffee -w -c -o lib src"
   },
   "repository": {
@@ -26,6 +26,7 @@
     "body-parser": "^1.15.0",
     "express": "^4.13.4",
     "formidable": "^1.0.17",
+    "node-php": "mkschreder/node-php",
     "socket.io": "^1.4.4"
   },
   "devDependencies": {}
