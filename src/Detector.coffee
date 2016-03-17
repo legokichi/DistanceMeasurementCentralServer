@@ -63,13 +63,12 @@ class this.Detector
     slideWidth = Math.pow(2, 4) # 時間分解能
     #new SignalViewer(f32arr.length/slideWidth, windowSize/2).draw(f32arr, {sampleRate}).appendTo(document.body)
     #new SignalViewer(1024, 256).drawSpectrogram(f32arr, {sampleRate, windowSize, slideWidth}).appendTo(document.body)
-    results = switch @pulseType
+    return switch @pulseType
       when "barker"           then startStops.map(@calc_barker(f32arr, sampleRate))
       when "chirp"            then startStops.map(@calc_chirp(f32arr, sampleRate))
       when "barkerCodedChirp" then startStops.map(@calc_barkerCodedChirp(f32arr, sampleRate))
       when "mseq"             then startStops.map(@calc_mseq(f32arr, sampleRate))
       else                         throw new Error "uknown pulse type #{pulseType}"
-    results
   calc_barker: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
     frame = craetePictureFrame "#{socket.id}<->#{id}", document.body
     section = rawdata.subarray(startPtr, stopPtr)
@@ -89,7 +88,10 @@ class this.Detector
     max_offset = idxA
     pulseTime = (startPtr + max_offset) / sampleRate
     max_val = maxA
-    {id, max_offset, pulseTime, max_val}
+    {
+      images: {}
+      results: {id, max_offset, pulseTime, max_val}
+    }
   calc_chirp: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
     @calc_barker(rawdata, sampleRate)({id, startPtr, stopPtr})
   calc_barkerCodedChirp: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
@@ -170,7 +172,10 @@ class this.Detector
     max_offset = idx + (idxA - range)
     pulseTime = (startPtr + max_offset) / sampleRate
     max_val = (maxA + maxB)/2
-    {id, max_offset, pulseTime, max_val}
+    {
+      images: {}
+      results: {id, max_offset, pulseTime, max_val}
+    }
 
 
 VIEW_SIZE = Math.pow(2, 12)

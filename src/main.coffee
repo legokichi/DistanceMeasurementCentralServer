@@ -34,10 +34,10 @@ initSocket = (next)->
   socket.on "disconnect",        console.info.bind(console, "disconnect")
   socket.on "error",             console.info.bind(console, "error")
 
-  socket.on "connect",         -> $("#socketId").html(socket.id); $("body").css({"background-color": location.hash.slice(1)}).append("<pre>connect#{socket.id}</pre>")
-  socket.on "reconnect",       -> $("#socketId").html(socket.id); $("body").css({"background-color": location.hash.slice(1)}).append("<pre>reconnect#{socket.id}</pre>")
-  socket.on "disconnect",      -> $("#socketId").html(socket.id); $("body").css({"background-color": "lightgray"}).append("<pre>disconnect#{socket.id}</pre>")
-  socket.on "error",      (err)-> console.error(err);             $("body").css({"background-color": "lightgray"}).append("<pre>#{err}</pre>")
+  socket.on "connect",         -> $("#socketId").html(socket.id); $("body").css({"background-color": location.hash.slice(1)}).append("<pre>connect:#{socket.id}</pre>")
+  socket.on "reconnect",       -> $("#socketId").html(socket.id); $("body").css({"background-color": location.hash.slice(1)}).append("<pre>reconnect:#{socket.id}</pre>")
+  socket.on "disconnect",      -> $("#socketId").html(socket.id); $("body").css({"background-color": "lightgray"}).append("<pre>disconnect</pre>")
+  socket.on "error",      (err)-> console.error(err);             $("body").css({"background-color": "lightgray"}).append("<pre>error:#{err}</pre>")
 
   socket.on "ready",      (a)-> _hoge.ready(a)      -> socket.emit("ready")
   socket.on "startRec",      -> _hoge.startRec      -> socket.emit("startRec")
@@ -45,8 +45,7 @@ initSocket = (next)->
   socket.on "beepPulse",     -> _hoge.beepPulse     -> socket.emit("beepPulse")
   socket.on "stopPulse",  (a)-> _hoge.stopPulse(a)  -> socket.emit("stopPulse")
   socket.on "stopRec",       -> _hoge.stopRec       -> socket.emit("stopRec")
-  socket.on "collectRec", (a)-> _hoge.collectRec(a) -> socket.emit("collectRec")
-  socket.on "collect",       -> _hoge.collect    (a)-> socket.emit("collect", a)
+  socket.on "collect",    (a)-> _hoge.collect(a) (a)-> socket.emit("collect", a)
   socket.on "distribute", (a)-> _hoge.distribute(a) -> socket.emit("distribute")
 
   socket.on "play",       (a)-> _hoge.play(a)

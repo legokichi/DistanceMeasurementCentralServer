@@ -15,7 +15,7 @@
     if(filesize($_FILES['file']['tmp_name']) == 0
     ) { // ファイルが空
         http_response_code(500);
-        echo json_encode(array('error' => 'Empty file'));
+        echo json_encode(array('error' => 'Empty file: ' . $_POST['filename']));
         die();
     }
 

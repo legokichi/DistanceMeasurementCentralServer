@@ -59,29 +59,37 @@ class this._Hoge
       stopPtr = (@pulseStopTime[id] - recStartTime) * @recbuf.sampleRate|0
       {id, startPtr, stopPtr}
     startStops
-  collectRec: (data)-> (next)=>
+  collect: (data)-> (next)=>
     {experimentID, timeStamp} = data
+    id         = socket.id
+    color      = @color
     startStops = @getStartStops()
-    int16arr = @recbuf.toPCM()
+    f32arr     = @recbuf.merge()
+    int16arr   = @recbuf.toPCM()
     sampleRate = @actx.sampleRate
-    wave = new Wave(1, sampleRate, int16arr).toBlob()
-    json = new Blob([JSON.stringify({sampleRate, startStops})])
-    Promise.all([
-      post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{@color}_#{socket.id}.wav",  file: wave})
-      post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{@color}_#{socket.id}.json", file: json})
-    ]).then(next).catch (err)-> console.error(err); throw err
-  collect: (next)->
-    startStops = @getStartStops()
-    f32arr = @recbuf.merge()
-    results = @detector.calc(f32arr, startStops)
+    wave       = new Wave(1, sampleRate, int16arr).toBlob()
+    json       = new Blob([JSON.stringify({sampleRate, startStops})])
+    dat        = new Blob([f32arr])
+    results    = @detector.calc(f32arr, startStops)
     @recbuf.clear()
-    next({id: socket.id, color: @color, results})
-  distribute: (data)=> (next)->
+    Promise.resolve()
+    .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.json", file: json})
+    .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.dat",  file: dat})
+    .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.wav",  file: wave})
+    .then ->
+      foldable = results.map ({images, results})-> ->
+        foldable2 = Object.keys(images).map (filename)-> ->
+          post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}_#{filename}",  file: images[filename]})
+        return foldable2.reduce(((a, b)-> a.then -> b()), Promise.resolve())
+      return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
+    .catch (err)-> console.error(err); throw err
+    .then -> next({id, color, results})
+  distribute: (data)-> (next)=>
     # data: [{id:string, results: [{id, max_offset, pulseTime, max_val}]}]
     data.forEach ({id, results})->
       console.group(id)
       console.log(id)
-      console.table(results)
+      console.table(results.map (a)-> a.results)
       console.groupEnd(id)
     next()
   play: (data)-> console.log "play", data

@@ -86,14 +86,22 @@ promisify = (fn)->
 
 start = (data)->
   {pulseType} = data
-  console.log "start", pulseType
   experimentID = Date.now()
+  console.log "start", experimentID, pulseType
   room = io.of("/")
   requestParallel(room, "ready", data)
   .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{pulseType}.json", JSON.stringify(data), cb)
-  .then(record(room))
-  .then -> requestParallel(room, "collectRec", {experimentID, timeStamp: Date.now()})
-  .then -> requestParallel(room, "collect")
+  .then -> requestParallel(room, "startRec")
+  .then ->
+    foldable = sockets(room).map (socket)-> ->
+      Promise.resolve()
+      .then -> requestParallel(room, "startPulse", socket.id)
+      .then -> request(socket, "beepPulse")
+      .then -> console.log "beepPulse", socket.id
+      .then -> requestParallel(room, "stopPulse", socket.id)
+    return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
+  .then -> requestParallel(room, "stopRec")
+  .then -> requestParallel(room, "collect", {experimentID, timeStamp: Date.now()})
   .then (a)-> requestParallel(room, "distribute", a)
   .then -> console.info "end"
   .catch(catchExperiment(experimentID, room))
@@ -104,6 +112,7 @@ catchExperiment = (experimentID, room)-> (err)->
   promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_error.txt", "#{err.message}\n#{err.stack}\n", cb)
 
 startAll = ->
+###
   console.log "startAll"
   room = io.of("/")
   experimentID = null
@@ -132,19 +141,7 @@ startAll = ->
   .then ->
     console.log "all task finished"
   .catch(catchExperiment(experimentID, room))
-
-record = (room)-> ->
-  requestParallel(room, "startRec")
-  .then ->
-    foldable = sockets(room).map (socket)-> ->
-      Promise.resolve()
-      .then -> requestParallel(room, "startPulse", socket.id)
-      .then -> request(socket, "beepPulse")
-      .then -> console.log "beepPulse", socket.id
-      .then -> requestParallel(room, "stopPulse", socket.id)
-    return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
-  .then -> requestParallel(room, "stopRec")
-
+###
 
 # socket.io tools
 
