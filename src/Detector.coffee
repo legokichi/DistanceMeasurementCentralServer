@@ -33,8 +33,8 @@ class this.Detector
     @matchedA = chirp
     @abuf = @osc.createAudioBufferFromArrayBuffer(@matchedA, @actx.sampleRate)
     next()
-  init_barkerCodedChirp: (_, next)->
-    bcc = Signal.createBarkerCodedChirp(13)
+  init_barkerCodedChirp: ({length}, next)->
+    bcc = Signal.createBarkerCodedChirp(13, length)
     @matchedA = bcc
     @abuf = @osc.createAudioBufferFromArrayBuffer(@matchedA, @actx.sampleRate)
     next()
