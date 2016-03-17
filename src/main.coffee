@@ -45,8 +45,7 @@ initSocket = (next)->
   socket.on "beepPulse",     -> _hoge.beepPulse     -> socket.emit("beepPulse")
   socket.on "stopPulse",  (a)-> _hoge.stopPulse(a)  -> socket.emit("stopPulse")
   socket.on "stopRec",       -> _hoge.stopRec       -> socket.emit("stopRec")
-  socket.on "calc",          -> _hoge.calc          -> socket.emit("calc")
-  socket.on "collect",    (a)-> _hoge.collect(a) (a)-> socket.emit("collect", a)
+  socket.on "collect",    (a)-> _hoge.collect(a)    -> socket.emit("collect")
   socket.on "distribute", (a)-> _hoge.distribute(a) -> socket.emit("distribute")
 
   socket.on "play",       (a)-> _hoge.play(a)

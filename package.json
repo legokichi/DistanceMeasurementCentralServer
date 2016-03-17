@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.coffee",
   "scripts": {
-    "init": "npm run update; npm run build",
+    "init": "npm install -g coffee-script bower; npm run update; npm run build",
     "update": "rm -rf bower_components; npm update; bower update",
     "clean": "rm lib/*.js",
     "start": "supervisor --extensions coffee server.coffee & npm run build & npm run watch",

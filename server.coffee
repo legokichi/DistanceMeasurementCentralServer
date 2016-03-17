@@ -1,15 +1,22 @@
-__PORT_NUMBER__ = 8083
-
 fs         = require("fs")
 bodyParser = require('body-parser')
 formidable = require('formidable')
 express    = require('express')
 http       = require('http')
+https      = require('https')
 socket     = require('socket.io')
-#php        = require("node-php")
-app        = express()
-server     = http.Server(app)
-io         = socket(server)
+php        = require("node-php")
+
+__PORT_NUMBER__ = 8083
+__HTTPS_OPTIONS__ =
+  key:  try fs.readFileSync('ssl/privateKey.pem')  catch err then null
+  cert: try fs.readFileSync('ssl/certificate.pem') catch err then null
+
+app = express()
+if __HTTPS_OPTIONS__.key? && __HTTPS_OPTIONS__.cert?
+then server = https.createServer(__HTTPS_OPTIONS__, app)
+else server = http.createServer(app)
+io  = socket(server)
 
 
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -19,7 +26,7 @@ app.use('/',                 express.static(__dirname + '/demo'))
 app.use('/bower_components', express.static(__dirname + '/bower_components'))
 app.use('/lib',              express.static(__dirname + '/lib'))
 app.use('/dist',             express.static(__dirname + '/dist'))
-#app.use("/php",                     php.cgi(__dirname + "/php"))
+app.use("/php",                     php.cgi(__dirname + "/php"))
 
 app.post "/push", (req, res)->
   form = new formidable.IncomingForm()
@@ -62,6 +69,7 @@ io.of("/").on 'connection', (socket)->
   socket.on "volume",     (data)-> io.of('/').emit("volume", data)
 
 server.listen(__PORT_NUMBER__)
+
 
 # m-seq seed
 # length: 15, seed: n("100000000000001")
@@ -108,9 +116,8 @@ start = (data)->
       .then -> requestParallel(room, "stopPulse", id)
     return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
   .then -> requestParallel(room, "stopRec")
-  .then -> requestParallel(room, "calc")
   .then -> requestSerial(room, "collect", {experimentID, timeStamp: Date.now()})
-  .then (a)-> requestParallel(room, "distribute", a)
+  .then -> requestParallel(room, "distribute")
   .then -> console.info "end"
   .catch (err)->
     console.error err, err.stack
@@ -158,8 +165,7 @@ requestSerial = (room, eventName, data)->
   console.log(eventName, data)
   foldable = sockets(room).map (socket)-> -> request(socket, eventName, data)
   results = []
-  foldable.reduce(((a, b)-> a.then (c)->
-    console.log(c)
-    results.push(c) if c?
+  foldable.reduce(((a, b, i)-> a.then (c)->
+    results.push(c) if i > 0
     return b()), Promise.resolve(null))
   .then -> results

@@ -3,7 +3,7 @@ Wave         = window["duxca"]["lib"]["Wave"]
 Detector     = window["Detector"]
 
 POST_URL = "/php/file_upload.php"
-POST_URL = "/push"
+#POST_URL = "/push"
 
 VIEW_SIZE = Math.pow(2, 12)
 
@@ -22,10 +22,6 @@ class this._Hoge
     @gain.connect(@actx.destination)
     @recbuf      = new RecordBuffer(@actx.sampleRate, @processor.bufferSize, @processor.channelCount)
     @detector    = new Detector(@actx)
-    @startStops  = null
-    @f32arr      = null
-    @int16arr    = null
-    @results     = null
   audioprocess: (ev)->
     if @isRecording
       @recbuf.add([new Float32Array(ev.inputBuffer.getChannelData(0))], @actx.currentTime)
@@ -66,46 +62,26 @@ class this._Hoge
       stopPtr = (@pulseStopTime[id] - recStartTime) * @recbuf.sampleRate|0
       {id, startPtr, stopPtr}
     startStops
-  calc: (next)->
-    @startStops = @getStartStops()
-    @f32arr     = @recbuf.merge()
-    @int16arr   = @recbuf.toPCM()
-    @results    = @detector.calc(@f32arr, @startStops)
-    @recbuf.clear()
-    next()
   collect: (data)-> (next)=>
     {experimentID, timeStamp} = data
-    id         = socket.id
-    color      = @color
-    startStops = @startStops
-    f32arr     = @f32arr
-    int16arr   = @int16arr
-    sampleRate = @actx.sampleRate
-    wave       = new Wave(1, sampleRate, int16arr).toBlob()
-    json       = new Blob([JSON.stringify({sampleRate, startStops})])
-    #dat        = new Blob([f32arr])
-    results    = @results
+    id          = socket.id
+    color       = @color
+    startStops  = @getStartStops()
+    f32arr      = @recbuf.merge()
+    int16arr    = @recbuf.toPCM()
+    @recbuf.clear()
+    sampleRate  = @actx.sampleRate
+    json        = new Blob([JSON.stringify({sampleRate, startStops})])
+    dat         = new Blob([f32arr])
+    wave        = new Wave(1, sampleRate, int16arr).toBlob()
     Promise.resolve()
     .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.json", file: json})
-    #.then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.dat",  file: dat})
+    .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.dat",  file: dat})
     .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.wav",  file: wave})
-    .then ->
-      foldable = results.map ({images, results})-> ->
-        foldable2 = Object.keys(images).map (filename)-> ->
-          getSignalImage(images[filename])
-          .then (img)-> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}_#{filename}.jpg",  file: img})
-        return foldable2.reduce(((a, b)-> a.then -> b()), Promise.resolve())
-      return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
     .catch (err)-> console.error(err); setTimeout -> throw err
-    .then ->
-      next({id, color, results: results.map ({results})-> results})
+    .then -> next()
   distribute: (data)-> (next)=>
     # data: [{id:string, results: [{id, max_offset, pulseTime, max_val}]}]
-    data.forEach ({id, results})->
-      console.group(id)
-      console.log(id)
-      console.table(results)
-      console.groupEnd(id)
     next()
   play: (data)-> console.log "play", data
   volume: (data)-> console.log "volume", data
