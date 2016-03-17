@@ -6,7 +6,7 @@ formidable = require('formidable')
 express    = require('express')
 http       = require('http')
 socket     = require('socket.io')
-php        = require("node-php")
+#php        = require("node-php")
 app        = express()
 server     = http.Server(app)
 io         = socket(server)
@@ -19,16 +19,22 @@ app.use('/',                 express.static(__dirname + '/demo'))
 app.use('/bower_components', express.static(__dirname + '/bower_components'))
 app.use('/lib',              express.static(__dirname + '/lib'))
 app.use('/dist',             express.static(__dirname + '/dist'))
-app.use("/php",                     php.cgi(__dirname + "/php"))
+#app.use("/php",                     php.cgi(__dirname + "/php"))
 
 app.post "/push", (req, res)->
   form = new formidable.IncomingForm()
   form.encoding = "utf-8"
   form.uploadDir = "./uploads"
   form.parse req, (err, fields, files)->
-    console.info err, fields, files
+    if err? ||
+       !fields.filename? ||
+       !files.file?
+      console.info err, fields, files
+      return
+    {filename} = fields
+    console.info fields
     oldPath = './' + files.file._writeStream.path
-    newPath = './uploads/' + Date.now() + "_" + files.file.name
+    newPath = './uploads/' + filename
     fs.rename oldPath, newPath, (err)-> if (err) then throw err
   res.statusCode = 204
   res.send()
@@ -94,54 +100,42 @@ start = (data)->
   .then -> requestParallel(room, "startRec")
   .then ->
     foldable = sockets(room).map (socket)-> ->
+      id = socket.id.replace(/^\/\#/, "")
       Promise.resolve()
-      .then -> requestParallel(room, "startPulse", socket.id)
+      .then -> requestParallel(room, "startPulse", id)
       .then -> request(socket, "beepPulse")
-      .then -> console.log "beepPulse", socket.id
-      .then -> requestParallel(room, "stopPulse", socket.id)
+      .then -> console.log "beepPulse", id
+      .then -> requestParallel(room, "stopPulse", id)
     return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
   .then -> requestParallel(room, "stopRec")
-  .then -> requestParallel(room, "collect", {experimentID, timeStamp: Date.now()})
+  .then -> requestParallel(room, "calc")
+  .then -> requestSerial(room, "collect", {experimentID, timeStamp: Date.now()})
   .then (a)-> requestParallel(room, "distribute", a)
   .then -> console.info "end"
-  .catch(catchExperiment(experimentID, room))
-
-catchExperiment = (experimentID, room)-> (err)->
-  console.error err, err.stack
-  timeStamp = Date.now()
-  promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_error.txt", "#{err.message}\n#{err.stack}\n", cb)
+  .catch (err)->
+    console.error err, err.stack
+    timeStamp = Date.now()
+    promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_error.txt", "#{err.message}\n#{err.stack}\n", cb)
 
 startAll = ->
-###
   console.log "startAll"
-  room = io.of("/")
-  experimentID = null
   params = [
     {pulseType: "barker", carrierFreq: 4410}
     {pulseType: "chirp", length:1024*8}
     {pulseType: "barkerCodedChirp"}
     {pulseType: "mseq", length: 10, seedA: n("0010000001"), seedB: n("0011111111"), carrierFreq: 4410}
   ]
-  applicative = (arr, fn)->
-    foldable = arr.map (data, i)-> -> fn(data, i)
-    return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
   applicative params, (data, i)->
-    experimentID = Date.now()
-    {pulseType} = data
-    console.log experimentID, pulseType, data, i
-    requestParallel(room, "ready", data)
-    .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{pulseType}.json", JSON.stringify(data), cb)
-    .then(record(room))
-    .then ->
-      console.log experimentID, "wrote"
-      applicative [1..10], (j)->
-        console.log i, j
-        requestParallel(room, "collectRec", {experimentID, timeStamp: Date.now()})
-        .then -> console.info "end"
-  .then ->
-    console.log "all task finished"
-  .catch(catchExperiment(experimentID, room))
-###
+    applicative [1..10], (j)->
+      console.log i+1, j+1, "/", params.length, 10
+      start(data)
+  .then -> console.log "all task finished"
+
+
+applicative = (arr, fn)->
+  foldable = arr.map (data, i)-> -> fn(data, i)
+  return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
+
 
 # socket.io tools
 
@@ -160,6 +154,12 @@ requestParallel = (room, eventName, data)->
   prms = sockets(room).map (socket)-> request(socket, eventName, data)
   Promise.all(prms)
 
-requestSerial = (room, eventName)->
+requestSerial = (room, eventName, data)->
+  console.log(eventName, data)
   foldable = sockets(room).map (socket)-> -> request(socket, eventName, data)
-  foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
+  results = []
+  foldable.reduce(((a, b)-> a.then (c)->
+    console.log(c)
+    results.push(c) if c?
+    return b()), Promise.resolve(null))
+  .then -> results

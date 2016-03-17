@@ -32,6 +32,10 @@ class this.SignalViewer
     sampleRate ?= 44100
     [max, _] = Signal.Statictics.findMax(arr)
     [min, _] = Signal.Statictics.findMin(arr)
+    fillStyle = @ctx.fillStyle
+    @ctx.fillStyle = "white"
+    @ctx.fillRect(0, 0, @cnv.width, @cnv.height)
+    @ctx.fillStyle = fillStyle
     if @drawAuto
       @zoomX = @cnv.width / arr.length
       @zoomY = @cnv.height / (max - min + 0.0000001)

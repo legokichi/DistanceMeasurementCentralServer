@@ -5,6 +5,7 @@ OSC = window["duxca"]["lib"]["OSC"]
 MULTIPASS_DISTANCE = 9
 SOUND_OF_SPEED = 340
 
+
 class this.Detector
   constructor: (actx)->
     @actx = actx
@@ -70,26 +71,27 @@ class this.Detector
       when "mseq"             then startStops.map(@calc_mseq(f32arr, sampleRate))
       else                         throw new Error "uknown pulse type #{pulseType}"
   calc_barker: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
-    frame = craetePictureFrame "#{socket.id}<->#{id}", document.body
+    images = {}
+    filename_head = "-TO-#{id}_"
     section = rawdata.subarray(startPtr, stopPtr)
     correlA = Signal.fft_smart_overwrap_correlation(section, @matchedA)
-    frame.view section, "section"
-    frame.view correlA, "correlA"
+    images[filename_head+"section"] = section
+    images[filename_head+"correlA"] = correlA
     [maxA, idxA] = Signal.Statictics.findMax(correlA)
     range = (MULTIPASS_DISTANCE/SOUND_OF_SPEED*sampleRate)|0
     marker = new Uint8Array(correlA.length)
     marker[idxA-range] = 255
     marker[idxA] = 255
     marker[idxA+range] = 255
-    frame.view marker, "marker"
+    images[filename_head+"marker"] = marker
     # 最大値付近を切り取り
     zoomA = correlA.subarray(idxA-range, idxA+range)
-    frame.view zoomA, "zoomA"
+    images[filename_head+"zoomA"] = zoomA
     max_offset = idxA
     pulseTime = (startPtr + max_offset) / sampleRate
     max_val = maxA
     {
-      images: {}
+      images,
       results: {id, max_offset, pulseTime, max_val}
     }
   calc_chirp: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
@@ -97,12 +99,14 @@ class this.Detector
   calc_barkerCodedChirp: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
     @calc_barker(rawdata, sampleRate)({id, startPtr, stopPtr})
   calc_mseq: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
-    frame = craetePictureFrame "#{socket.id}<->#{id}", document.body
-    correlA = Signal.fft_smart_overwrap_correlation(rawdata, @matchedA)
-    correlB = Signal.fft_smart_overwrap_correlation(rawdata, @matchedB)
-    frame.view rawdata, "rawdata"
-    frame.view correlA, "correlA"
-    frame.view correlB, "correlB"
+    images = {}
+    filename_head = "-TO-#{id}_"
+    section = rawdata.subarray(startPtr, stopPtr)
+    correlA = Signal.fft_smart_overwrap_correlation(section, @matchedA)
+    correlB = Signal.fft_smart_overwrap_correlation(section, @matchedB)
+    images[filename_head+"section"] = section
+    images[filename_head+"correlA"] = correlA
+    images[filename_head+"correlB"] = correlB
     [_, idxA] = Signal.Statictics.findMax(correlA)
     [_, idxB] = Signal.Statictics.findMax(correlB)
     relB = idxA + @matchedA.length*2; if relB < 0 then relB = 0; # Bの位置とAから見たBの位置
@@ -138,15 +142,15 @@ class this.Detector
     marker[idxB-range] = 255
     marker[idxB] = 255
     marker[idxB+range] = 255
-    frame.view marker, "marker"
+    images[filename_head+"marker"] = marker
     # 最大値付近を切り取り
     zoomA = correlA.subarray(idxA-range, idxA+range)
     zoomB = correlB.subarray(idxB-range, idxB+range)
-    frame.view zoomA, "zoomA"
-    frame.view zoomB, "zoomB"
+    images[filename_head+"zoomA"] = zoomA
+    images[filename_head+"zoomB"] = zoomB
     # 位置が一致するように微調整
     correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB)
-    frame.view correl, "correl"
+    images[filename_head+"correl"] = correl
     # 区間に分けて相関値を探索
     # パルス位置は上記の通りを一致させてあるので AとBの区間において相互相関[0] の位置の相関値を調べグラフ化
     zoom = zoomA.map (_, i)-> zoomA[i]*zoomB[i]
@@ -158,57 +162,21 @@ class this.Detector
       val = zoom.subarray(i, i + windowsize).reduce(((sum, v, i)-> sum + v), 0)
       logs[i] = val
       i += slidewidth
-    frame.view logs, "logs"
-    _logs = Signal.lowpass(logs, sampleRate, 800, 1)
-    frame.view _logs, "logs(lowpass)"
-    [max, _idx] = Signal.Statictics.findMax(_logs)
+    images[filename_head+"logs"] = logs
+    lowpass = Signal.lowpass(logs, sampleRate, 800, 1)
+    images[filename_head+"lowpass"] = lowpass
+    [max, _idx] = Signal.Statictics.findMax(lowpass)
     i = 1
-    i++ while i < _idx && _logs[i] < max/5
-    i++ while i < _idx && _logs[i] > _logs[i-1]
+    i++ while i < _idx && lowpass[i] < max/5
+    i++ while i < _idx && lowpass[i] > lowpass[i-1]
     idx = i
-    marker = new Uint8Array(logs.length)
-    marker[idx] = 255
-    frame.view marker, "marker"
+    marker2 = new Uint8Array(logs.length)
+    marker2[idx] = 255
+    images[filename_head+"marker2"] = marker2
     max_offset = idx + (idxA - range)
     pulseTime = (startPtr + max_offset) / sampleRate
     max_val = (maxA + maxB)/2
     {
-      images: {}
+      images,
       results: {id, max_offset, pulseTime, max_val}
     }
-
-
-VIEW_SIZE = Math.pow(2, 12)
-craetePictureFrame = (description, target) ->
-  fieldset = document.createElement('fieldset')
-  style = document.createElement('style')
-  style.appendChild(document.createTextNode("canvas,img{border:1px solid black;}"))
-  style.setAttribute("scoped", "scoped")
-  fieldset.appendChild(style)
-  legend = document.createElement('legend')
-  legend.appendChild(document.createTextNode(description))
-  fieldset.appendChild(legend)
-  fieldset.style.display = 'inline-block'
-  fieldset.style.backgroundColor = "white"
-  target.appendChild fieldset if target?
-  return {
-    element: fieldset
-    add: (element)->
-      if typeof element is "string"
-        txtNode = document.createTextNode element
-        p = document.createElement("p")
-        p.appendChild txtNode
-        fieldset.appendChild p
-      else fieldset.appendChild element
-    view: (arr, title="")->
-      __frame = craetePictureFrame title + "(#{arr.length})"
-      width = if VIEW_SIZE < arr.length then VIEW_SIZE else arr.length
-      render = new SignalViewer(width, 64)
-      render.draw(arr)
-      __frame.add render.cnv
-      @add __frame.element
-      @add document.createElement "br"
-    text: (title)->
-      @add document.createTextNode title
-      @add document.createElement "br"
-  }

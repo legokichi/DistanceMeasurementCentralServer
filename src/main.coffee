@@ -45,6 +45,7 @@ initSocket = (next)->
   socket.on "beepPulse",     -> _hoge.beepPulse     -> socket.emit("beepPulse")
   socket.on "stopPulse",  (a)-> _hoge.stopPulse(a)  -> socket.emit("stopPulse")
   socket.on "stopRec",       -> _hoge.stopRec       -> socket.emit("stopRec")
+  socket.on "calc",          -> _hoge.calc          -> socket.emit("calc")
   socket.on "collect",    (a)-> _hoge.collect(a) (a)-> socket.emit("collect", a)
   socket.on "distribute", (a)-> _hoge.distribute(a) -> socket.emit("distribute")
 
@@ -58,10 +59,17 @@ window.addEventListener "DOMContentLoaded", -> setup -> main -> console.log "ini
 window.addEventListener "error", (ev)->
   err = ev.error
   console.error err
-  pre = $("<pre />")
-  .append("<br>"+err)
-  .append("<br>"+err.message)
-  .append("<br>"+err.stack)
+  if err instanceof Error
+    pre = $("<pre />")
+    .append("<br>"+err)
+    .append("<br>"+err.message)
+    .append("<br>"+err.stack)
+  else if Object::toString.call(err) is "[object Object]"
+    pre = $("<pre />")
+    .append("<br>"+JSON.stringify(err))
+  else
+    pre = $("<pre />")
+    .append("<br>"+err)
   $("body")
   .css({"background-color": "gray"})
   .append(pre)
