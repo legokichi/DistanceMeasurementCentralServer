@@ -54,5 +54,15 @@
   <a href="/reload">reload</a>
   <a href="/sockets">sockets</a>
 </p>
+<form action="/php/file_upload.php" method="post" enctype="multipart/form-data">
+  <input type="text" name="filename" value="" />
+  <input type="file" name="file" />
+  <input type="submit" value="php" />
+</form>
+<form action="/push" method="post" enctype="multipart/form-data">
+  <input type="text" name="filename" value="" />
+  <input type="file" name="file" />
+  <input type="submit" value="node" />
+</form>
 </body>
 </html>

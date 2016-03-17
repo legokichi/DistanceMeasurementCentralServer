@@ -92,23 +92,11 @@ start = (data)->
   requestParallel(room, "ready", data)
   .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{pulseType}.json", JSON.stringify(data), cb)
   .then(record(room))
-  .then(collectRec(experimentID, room))
+  .then -> requestParallel(room, "collectRec", {experimentID, timeStamp: Date.now()})
   .then -> requestParallel(room, "collect")
   .then (a)-> requestParallel(room, "distribute", a)
   .then -> console.info "end"
   .catch(catchExperiment(experimentID, room))
-
-collectRec = (experimentID, room)-> ->
-  Promise.resolve()
-  .then -> requestParallel(room, "collectRec")
-  .then (datas)->
-    console.log datas
-    Promise.all datas.map ({id, color, results: {wave, startStops, sampleRate}})->
-      timeStamp = Date.now()
-      Promise.all [
-        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_#{color}_#{id}.wav", wave, cb)
-        promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{timeStamp}_#{color}_#{id}.json", JSON.stringify({sampleRate, startStops}), cb)
-      ]
 
 catchExperiment = (experimentID, room)-> (err)->
   console.error err, err.stack
@@ -136,11 +124,10 @@ startAll = ->
     .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{pulseType}.json", JSON.stringify(data), cb)
     .then(record(room))
     .then ->
-      step = collectRec(experimentID, room)
       console.log experimentID, "wrote"
       applicative [1..10], (j)->
         console.log i, j
-        step()
+        requestParallel(room, "collectRec", {experimentID, timeStamp: Date.now()})
         .then -> console.info "end"
   .then ->
     console.log "all task finished"

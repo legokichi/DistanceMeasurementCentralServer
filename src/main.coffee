@@ -45,7 +45,7 @@ initSocket = (next)->
   socket.on "beepPulse",     -> _hoge.beepPulse     -> socket.emit("beepPulse")
   socket.on "stopPulse",  (a)-> _hoge.stopPulse(a)  -> socket.emit("stopPulse")
   socket.on "stopRec",       -> _hoge.stopRec       -> socket.emit("stopRec")
-  socket.on "collectRec",    -> _hoge.collectRec (a)-> socket.emit("collectRec", a)
+  socket.on "collectRec", (a)-> _hoge.collectRec(a) -> socket.emit("collectRec")
   socket.on "collect",       -> _hoge.collect    (a)-> socket.emit("collect", a)
   socket.on "distribute", (a)-> _hoge.distribute(a) -> socket.emit("distribute")
 
@@ -55,7 +55,7 @@ initSocket = (next)->
   next()
 
 
-window.addEventListener "DOMContentLoaded", -> setup -> main -> console.log "init main"
+window.addEventListener "DOMContentLoaded", -> setup -> main -> console.log "init main";
 window.addEventListener "error", (ev)->
   err = ev.error
   console.error err
