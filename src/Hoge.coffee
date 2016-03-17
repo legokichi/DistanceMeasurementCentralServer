@@ -10,7 +10,7 @@ class this._Hoge
     @nextTick = null
     @pulseStartTime = {}
     @pulseStopTime  = {}
-    @processor = @actx.createScriptProcessor(Math.pow(2, 14), 1, 1); # between Math.pow(2,8) and Math.pow(2,14).
+    @processor = @actx.createScriptProcessor(Math.pow(2, 14), 1, 1) # between Math.pow(2,8) and Math.pow(2,14).
     @processor.connect(@actx.destination)
     @processor.addEventListener("audioprocess", @audioprocess.bind(@))
     @gain = @actx.createGain()
@@ -56,13 +56,19 @@ class this._Hoge
       stopPtr = (@pulseStopTime[id] - recStartTime) * @recbuf.sampleRate|0
       {id, startPtr, stopPtr}
     startStops
+  collectRec: (next)->
+    startStops = @getStartStops()
+    int16arr = @recbuf.toPCM()
+    sampleRate = @actx.sampleRate
+    wave = new Wave(1, sampleRate, int16arr).toBlob()
+    #@recbuf.clear()
+    next({id: socket.id, color: @color, results: {wave, startStops, sampleRate}})
   collect: (next)->
     startStops = @getStartStops()
     f32arr = @recbuf.merge()
     results = @detector.calc(f32arr, startStops)
-    id = socket.id
-    color = @color
-    next({id, color, results})
+    @recbuf.clear()
+    next({id: socket.id, color: @color, results})
   distribute: (data)=> (next)->
     data # [{id:string, results: [{id, max_offset, pulseTime, max_val}]}]
     data.forEach ({id, results})->
@@ -71,12 +77,5 @@ class this._Hoge
       console.table(results)
       console.groupEnd(id)
     next()
-  collectRec: (next)->
-    startStops = @getStartStops()
-    int16arr = @recbuf.toPCM()
-    sampleRate = @actx.sampleRate
-    wave = new Wave(1, sampleRate, int16arr).toBlob()
-    @recbuf.clear()
-    next({id: socket.id, color: @color, results: {wave, startStops, sampleRate}})
   play: (data)-> console.log "play", data
   volume: (data)-> console.log "volume", data
