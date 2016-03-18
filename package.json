@@ -7,7 +7,7 @@
     "init": "npm install -g coffee-script bower; npm run update; npm run build",
     "update": "rm -rf bower_components; npm update; bower update",
     "clean": "rm lib/*.js",
-    "start": "supervisor --extensions coffee server.coffee & npm run build & npm run watch",
+    "start": "supervisor --extensions coffee server.coffee | tee server.log & npm run build & npm run watch",
     "stop": "killall -- supervisor --extensions coffee server.coffee",
     "build": "coffee -c -o lib src",
     "watch": "npm run build; coffee -w -c -o lib src"
