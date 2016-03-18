@@ -33,19 +33,19 @@ res204 =  (fn)-> (req, res)-> setTimeout(-> fn(req, res)); res.sendStatus(204)
 
 app.post "/upload", (req, res)->
   form = new multiparty.Form()
-  form.on 'error', (err)-> console.error('Error parsing form: ' + err.stack)
+  form.on 'error', (err)-> console.error('Error parsing form: ', err, err.stack)
   form.on 'part', (part)->
+    part.on 'error', (err)-> console.error("Error part", err, err.stack)
     part.resume()
-    part.on 'error', (err)->
-      console.error("Error part", err, err.stack)
   #form.on 'close', ->
   form.parse req, (err, fields, files) ->
-    console.info err, fields, files
     if err? ||
        !fields.filename?[0]? ||
        !(files.file?[0]?.size > 0)
       console.error err, err?.stack, fields, files
-      throw err
+      res.sendStatus(500)
+      return
+    console.info fields
     filename = fields.filename[0]
     oldPath = files.file[0].path
     newPath = __dirname + '/uploads/' + filename
@@ -110,7 +110,7 @@ start = (data)->
   console.log "start", experimentID, pulseType
   room = io.of("/")
   requestParallel(room, "ready", data)
-  .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{pulseType}.json", JSON.stringify(data), cb)
+  .then -> promisify (cb)-> fs.writeFile("uploads/#{experimentID}_#{pulseType}.json", JSON.stringify(data, null, "  "), cb)
   .then -> requestParallel(room, "startRec")
   .then ->
     foldable = sockets(room).map (socket)-> ->
@@ -123,7 +123,7 @@ start = (data)->
     return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
   .then -> requestParallel(room, "stopRec")
   .then -> requestParallel(room, "collect", {experimentID, timeStamp: Date.now()})
-  .then (a)-> requestParallel(room, "distribute", a)
+  .then (a)-> requestParallel(room, "distribute", {experimentID, timeStamp: Date.now(), datas: a})
   .then -> console.info "end"
   .catch (err)->
     console.error err, err.stack
