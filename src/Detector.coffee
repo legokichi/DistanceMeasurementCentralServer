@@ -2,8 +2,8 @@ SignalViewer = window["SignalViewer"]
 Signal = window["Signal"]
 OSC = window["duxca"]["lib"]["OSC"]
 
-MULTIPASS_DISTANCE = 9
-SOUND_OF_SPEED = 340
+__MULTIPASS_DISTANCE__ = 9
+__SOUND_OF_SPEED__ = 340
 
 
 class this.Detector
@@ -58,6 +58,13 @@ class this.Detector
       then setTimeout(next, 100)
       else setTimeout(recur, 100)
   calc: (f32arr, startStops, opt={})->
+    ###
+    startStops: {
+      id:       string,
+      startPtr: number,
+      stopPtr:  number
+    }
+    ###
     {sampleRate} = opt
     sampleRate ?= @actx.sampleRate
     windowSize = Math.pow(2, 8) # 周波数分解能
@@ -71,28 +78,29 @@ class this.Detector
       when "mseq"             then startStops.map(@calc_mseq(f32arr, sampleRate))
       else                         throw new Error "uknown pulse type #{pulseType}"
   calc_barker: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
+    counter = 0
     images = {}
     filename_head = "-TO-#{id}_"
     section = rawdata.subarray(startPtr, stopPtr)
     correlA = Signal.fft_smart_overwrap_correlation(section, @matchedA)
-    images[filename_head+"section"] = section
-    images[filename_head+"correlA"] = correlA
+    images[filename_head+"#{counter++}section"] = section
+    images[filename_head+"#{counter++}correlA"] = correlA
     [maxA, idxA] = Signal.Statictics.findMax(correlA)
-    range = (MULTIPASS_DISTANCE/SOUND_OF_SPEED*sampleRate)|0
+    range = (__MULTIPASS_DISTANCE__/__SOUND_OF_SPEED__*sampleRate)|0
     marker = new Uint8Array(correlA.length)
     marker[idxA-range] = 255
     marker[idxA] = 255
     marker[idxA+range] = 255
-    images[filename_head+"marker"] = marker
+    images[filename_head+"#{counter++}marker"] = marker
     # 最大値付近を切り取り
     zoomA = correlA.subarray(idxA-range, idxA+range)
-    images[filename_head+"zoomA"] = zoomA
+    images[filename_head+"#{counter++}zoomA"] = zoomA
     max_offset = idxA
     pulseTime = (startPtr + max_offset) / sampleRate
     max_val = maxA
     {
       images,
-      results: {id, max_offset, pulseTime, max_val}
+      pulseInfo: {id, max_offset, pulseTime, max_val}
     }
   calc_chirp: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
     @calc_barker(rawdata, sampleRate)({id, startPtr, stopPtr})
@@ -100,13 +108,14 @@ class this.Detector
     @calc_barker(rawdata, sampleRate)({id, startPtr, stopPtr})
   calc_mseq: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
     images = {}
+    counter = 0
     filename_head = "-TO-#{id}_"
     section = rawdata.subarray(startPtr, stopPtr)
     correlA = Signal.fft_smart_overwrap_correlation(section, @matchedA)
     correlB = Signal.fft_smart_overwrap_correlation(section, @matchedB)
-    images[filename_head+"section"] = section
-    images[filename_head+"correlA"] = correlA
-    images[filename_head+"correlB"] = correlB
+    images[filename_head+"#{counter++}section"] = section
+    images[filename_head+"#{counter++}correlA"] = correlA
+    images[filename_head+"#{counter++}correlB"] = correlB
     [_, idxA] = Signal.Statictics.findMax(correlA)
     [_, idxB] = Signal.Statictics.findMax(correlB)
     relB = idxA + @matchedA.length*2; if relB < 0 then relB = 0; # Bの位置とAから見たBの位置
@@ -123,7 +132,7 @@ class this.Detector
       (x)-> 10 * (x - ave) / vari + 50
     scoreB = stdscoreB(correlB[idxB]) + stdscoreA(correlA[relA])
     scoreA = stdscoreA(correlA[idxA]) + stdscoreB(correlB[relB]) # Aの値とAから見たBの位置の値
-    range = (MULTIPASS_DISTANCE/SOUND_OF_SPEED*sampleRate)|0
+    range = (__MULTIPASS_DISTANCE__/__SOUND_OF_SPEED__*sampleRate)|0
     if relA > 0 && scoreB > scoreA
       # Bが正しいのでAを修正
       [_, idx] = Signal.Statictics.findMax(correlA.subarray(relA-range, relA+range))
@@ -142,29 +151,29 @@ class this.Detector
     marker[idxB-range] = 255
     marker[idxB] = 255
     marker[idxB+range] = 255
-    images[filename_head+"marker"] = marker
+    images[filename_head+"#{counter++}marker"] = marker
     # 最大値付近を切り取り
     zoomA = correlA.subarray(idxA-range, idxA+range)
     zoomB = correlB.subarray(idxB-range, idxB+range)
-    images[filename_head+"zoomA"] = zoomA
-    images[filename_head+"zoomB"] = zoomB
+    images[filename_head+"#{counter++}zoomA"] = zoomA
+    images[filename_head+"#{counter++}zoomB"] = zoomB
     # 位置が一致するように微調整
     correl = Signal.fft_smart_overwrap_correlation(zoomA, zoomB)
-    images[filename_head+"correl"] = correl
+    images[filename_head+"#{counter++}correl"] = correl
     # 区間に分けて相関値を探索
     # パルス位置は上記の通りを一致させてあるので AとBの区間において相互相関[0] の位置の相関値を調べグラフ化
     zoom = zoomA.map (_, i)-> zoomA[i]*zoomB[i]
     logs = new Float32Array(zoom.length)
-    windowsize = (0.6/SOUND_OF_SPEED*sampleRate)|0
+    windowsize = (0.6/__SOUND_OF_SPEED__*sampleRate)|0
     slidewidth = 1
     i = 0
     while zoomA.length > i + windowsize
       val = zoom.subarray(i, i + windowsize).reduce(((sum, v, i)-> sum + v), 0)
       logs[i] = val
       i += slidewidth
-    images[filename_head+"logs"] = logs
+    images[filename_head+"#{counter++}logs"] = logs
     lowpass = Signal.lowpass(logs, sampleRate, 800, 1)
-    images[filename_head+"lowpass"] = lowpass
+    images[filename_head+"#{counter++}lowpass"] = lowpass
     [max, _idx] = Signal.Statictics.findMax(lowpass)
     i = 1
     i++ while i < _idx && lowpass[i] < max/5
@@ -172,11 +181,75 @@ class this.Detector
     idx = i
     marker2 = new Uint8Array(logs.length)
     marker2[idx] = 255
-    images[filename_head+"marker2"] = marker2
+    images[filename_head+"#{counter++}marker2"] = marker2
     max_offset = idx + (idxA - range)
     pulseTime = (startPtr + max_offset) / sampleRate
     max_val = (maxA + maxB)/2
     {
       images,
-      results: {id, max_offset, pulseTime, max_val}
+      pulseInfo: {id, max_offset, pulseTime, max_val}
+    }
+  distribute: (datas)->
+    ###
+    datas: {
+      [index: number]: {
+        id:           string,
+        alias:        string,
+        sampleRate:   number,
+        recStartTime: number,
+        recStopTime:  number,
+        startStops: {
+          [index: number]: {
+            id:       string,
+            startPtr: string,
+            stopPtr:  string}},
+        pulseInfos: {
+          [index: number]: {
+            id        : string,
+            max_offset: number,
+            pulseTime : number,
+            max_val   : number}}}}
+    ###
+    console.log datas
+    pulseTimes    = {} # 各端末時間での録音開始してからの自分のパルスを鳴らした時間
+    relDelayTimes = {} # 自分にとって相手の音は何秒前or何秒後に聞こえたか。delayTimes算出に必要
+    delayTimes    = {} # 音速によるパルスの伝播時間
+    distances     = {} # 相対距離
+    aliases       = datas.reduce(((o, {id, alias})-> o[id] = alias; o), {})
+    sampleRates   = datas.reduce(((o, {alias, sampleRate})->   o[alias] = sampleRate; o), {})
+    recStartTimes = datas.reduce(((o, {alias, recStartTime})-> o[alias] = recStartTime; o), {})
+    recStopTimes  = datas.reduce(((o, {alias, recStopTime})->  o[alias] = recStopTime; o), {})
+    datas.forEach ({id: id1, alias, pulseInfos})->
+      pulseInfos.forEach ({id: id2, pulseTime})->
+        pulseTimes[aliases[id1]] = pulseTimes[aliases[id1]] || {}
+        pulseTimes[aliases[id1]][aliases[id2]] = pulseTime
+    Object.keys(pulseTimes).forEach (id1)->
+      Object.keys(pulseTimes).forEach (id2)->
+        relDelayTimes[id1] = relDelayTimes[id1] || {}
+        relDelayTimes[id1][id2] = pulseTimes[id1][id2] - pulseTimes[id1][id1]
+    Object.keys(pulseTimes).forEach (id1)->
+      Object.keys(pulseTimes).forEach (id2)->
+        delayTimes[id1] = delayTimes[id1] || {}
+        delayTimes[id1][id2] = Math.abs(Math.abs(relDelayTimes[id1][id2]) - Math.abs(relDelayTimes[id2][id1]))
+        distances[id1] = distances[id1] || {}
+        distances[id1][id2] = Math.abs(delayTimes[id1][id2])/2*__SOUND_OF_SPEED__
+    console.group("table")
+    console.info("aliases",        aliases)
+    console.info("sampleRates",    sampleRates)
+    console.info("recStartTimes",  recStartTimes)
+    console.info("recStopTimes",   recStopTimes)
+    console.info("pulseTimes");    console.table(pulseTimes)
+    console.info("relDelayTimes"); console.table(relDelayTimes)
+    console.info("delayTimes");    console.table(delayTimes)
+    console.info("distances");     console.table(distances)
+    console.groupEnd()
+    {
+      aliases
+      sampleRates
+      recStartTimes
+      recStopTimes
+      pulseTimes
+      relDelayTimes
+      delayTimes
+      distances
     }

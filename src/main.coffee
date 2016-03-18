@@ -1,24 +1,25 @@
-_Hoge = window["_Hoge"]
+Recorder = window["Recorder"]
 io    = window["io"]
 
 window.navigator["getUserMedia"] = window.navigator.getUserMedia       ||
                                    window.navigator.mozGetUserMedia    ||
                                    window.navigator.webkitGetUserMedia
 
-actx = null
-socket = null
-_hoge = null
+actx     = null
+socket   = null
+recorder = null
 
 setup = (next)->
   color = location.hash.slice(1)
   actx = new AudioContext()
-  _hoge = new _Hoge(actx, color)
-  _hoge.prepareRec -> initSocket -> next()
+  recorder = new Recorder(actx, color)
+  recorder.prepareRec -> initSocket -> next()
   socket = io(location.hostname+":"+location.port+"/")
   window["actx"] = actx
   window["socket"] = socket
   do changeColor = ->
-    _hoge.color = document.body.style.backgroundColor = location.hash.slice(1)
+    console.log location.hash.slice(1)
+    recorder.color = document.body.style.backgroundColor = location.hash.slice(1)
   window.addEventListener "hashchange", changeColor
 
 main = (next)->
@@ -39,17 +40,17 @@ initSocket = (next)->
   socket.on "disconnect",      -> $("#socketId").html(socket.id); $("body").css({"background-color": "lightgray"}).append("<pre>disconnect</pre>")
   socket.on "error",      (err)-> console.error(err);             $("body").css({"background-color": "lightgray"}).append("<pre>error:#{err}</pre>")
 
-  socket.on "ready",      (a)-> _hoge.ready(a)      -> socket.emit("ready")
-  socket.on "startRec",      -> _hoge.startRec      -> socket.emit("startRec")
-  socket.on "startPulse", (a)-> _hoge.startPulse(a) -> socket.emit("startPulse")
-  socket.on "beepPulse",     -> _hoge.beepPulse     -> socket.emit("beepPulse")
-  socket.on "stopPulse",  (a)-> _hoge.stopPulse(a)  -> socket.emit("stopPulse")
-  socket.on "stopRec",       -> _hoge.stopRec       -> socket.emit("stopRec")
-  socket.on "collect",    (a)-> _hoge.collect(a)    -> socket.emit("collect")
-  socket.on "distribute", (a)-> _hoge.distribute(a) -> socket.emit("distribute")
+  socket.on "ready",      (a)-> recorder.ready(a)      -> socket.emit("ready")
+  socket.on "startRec",      -> recorder.startRec      -> socket.emit("startRec")
+  socket.on "startPulse", (a)-> recorder.startPulse(a) -> socket.emit("startPulse")
+  socket.on "beepPulse",     -> recorder.beepPulse     -> socket.emit("beepPulse")
+  socket.on "stopPulse",  (a)-> recorder.stopPulse(a)  -> socket.emit("stopPulse")
+  socket.on "stopRec",       -> recorder.stopRec       -> socket.emit("stopRec")
+  socket.on "collect",    (a)-> recorder.collect(a) (a)-> socket.emit("collect", a)
+  socket.on "distribute", (a)-> recorder.distribute(a) -> socket.emit("distribute")
 
-  socket.on "play",       (a)-> _hoge.play(a)
-  socket.on "volume",     (a)-> _hoge.volume(a)
+  socket.on "play",       (a)-> recorder.play(a)
+  socket.on "volume",     (a)-> recorder.volume(a)
   socket.on "reload",        -> location.reload()
   next()
 

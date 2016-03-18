@@ -2,12 +2,12 @@ RecordBuffer = window["duxca"]["lib"]["RecordBuffer"]
 Wave         = window["duxca"]["lib"]["Wave"]
 Detector     = window["Detector"]
 
-#POST_URL = "/php/upload.php"
-POST_URL = "/upload"
+#__UPLOADER_POST_URL__ = "/php/upload.php"
+__UPLOADER_POST_URL__ = "/upload"
 
-VIEW_SIZE = Math.pow(2, 12)
+__VIEW_SIZE__ = Math.pow(2, 12)
 
-class this._Hoge
+class this.Recorder
   constructor: (actx, color)->
     @actx        = actx
     @color       = color
@@ -54,43 +54,49 @@ class this._Hoge
   stopRec: (next)->
     @isRecording = false
     next()
-  getStartStops: ->
-    recStartTime = @recbuf.sampleTimes[0] - (@recbuf.bufferSize / @recbuf.sampleRate)
-    recStopTime = @recbuf.sampleTimes[@recbuf.sampleTimes.length-1]
-    startStops = Object.keys(@pulseStartTime).map (id)=>
-      startPtr = (@pulseStartTime[id] - recStartTime) * @recbuf.sampleRate|0
-      stopPtr = (@pulseStopTime[id] - recStartTime) * @recbuf.sampleRate|0
-      {id, startPtr, stopPtr}
-    startStops
   collect: (data)-> (next)=>
-    {experimentID, timeStamp} = data
+    {experimentID, timeStamp}  = data
+    recStartTime = @recbuf.sampleTimes[0] - (@recbuf.bufferSize / @recbuf.sampleRate)
+    recStopTime  = @recbuf.sampleTimes[@recbuf.sampleTimes.length-1]
+    startStops   = Object.keys(@pulseStartTime).map (id)=>
+      startPtr = (@pulseStartTime[id] - recStartTime) * @recbuf.sampleRate|0
+      stopPtr  = (@pulseStopTime[id] - recStartTime) * @recbuf.sampleRate|0
+      {id, startPtr, stopPtr}
     id          = socket.id
-    color       = @color
-    startStops  = @getStartStops()
+    alias       = @color
+    sampleRate  = @actx.sampleRate
     f32arr      = @recbuf.merge()
     int16arr    = @recbuf.toPCM()
-    results    = @detector.calc(f32arr, startStops)
-    @recbuf.clear()
-    sampleRate  = @actx.sampleRate
-    json        = new Blob([JSON.stringify({sampleRate, startStops})])
+    results     = @detector.calc(f32arr, startStops)
+    pulseInfos  = results.map ({pulseInfo})-> pulseInfo
+    resObj      = {id, alias, sampleRate, recStartTime, recStopTime, startStops, pulseInfos}
+    json        = new Blob([JSON.stringify(resObj, null, "  ")])
     dat         = new Blob([f32arr])
     wave        = new Wave(1, sampleRate, int16arr).toBlob()
+    prefix      = "#{experimentID}_#{timeStamp}_collect_#{alias}_#{id}"
+    @recbuf.clear()
     Promise.resolve()
-    .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.json", file: json})
-    .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.dat",  file: dat})
-    .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.wav",  file: wave})
+    .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.json", file: json})
+    .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.dat",  file: dat})
+    .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.wav",  file: wave})
     .then ->
-      foldable = results.map ({images, results})-> ->
+      foldable = results.map ({images})-> ->
         foldable2 = Object.keys(images).map (filename)-> ->
           getSignalImage(images[filename])
-          .then (img)-> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}_#{filename}.jpg",  file: img})
+          .then (img)-> post(__UPLOADER_POST_URL__, {filename: "#{prefix}_#{filename}.jpg",  file: img})
         return foldable2.reduce(((a, b)-> a.then -> b()), Promise.resolve())
       return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
-    .catch (err)-> console.error(err); setTimeout -> throw err
-    .then -> next({id, color, results: results.map ({results})-> results})
+    .catch (err)-> console.error(err)
+    .then -> next(resObj)
   distribute: (data)-> (next)=>
-    # data: [{id:string, results: [{id, max_offset, pulseTime, max_val}]}]
-    console.log data
+    {experimentID, timeStamp, datas} = data
+    id      = socket.id
+    alias   = @color
+    prefix  = "#{experimentID}_#{timeStamp}_distribute_#{alias}_#{id}"
+    results = @detector.distribute(datas)
+    json    = new Blob([JSON.stringify(results, null, "  ")])
+    Promise.resolve()
+    .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.json", file: json})
     next()
   play: (data)-> console.log "play", data
   volume: (data)-> console.log "volume", data
@@ -110,7 +116,7 @@ post = (url, param)->
 
 getSignalImage = (arr, cb)->
   new Promise (resolve)->
-    width = if VIEW_SIZE < arr.length then VIEW_SIZE else arr.length
+    width = if __VIEW_SIZE__ < arr.length then __VIEW_SIZE__ else arr.length
     render = new SignalViewer(width, 64)
     render.draw(arr)
     render.cnv.toBlob(resolve, "image/jpeg", 0.5)

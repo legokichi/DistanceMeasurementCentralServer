@@ -11,18 +11,17 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/lib/SignalViewer.js"></script>
   <script src="/lib/Detector.js"></script>
-  <script src="/lib/Hoge.js"></script>
+  <script src="/lib/Recorder.js"></script>
   <script src="/lib/main.js"></script>
   <style>
   </style>
 </head>
 <body>
-<style>
-</style>
 <p>
   <span id="socketId">null</span>
 </p>
-<p>
+<fieldset>
+  <legend>decide your alias name</legend>
   <div>
     <a href="/#red">red</a>
     <a href="/#lime">green</a>
@@ -38,30 +37,33 @@
     <a href="/#olive">olive</a>
     <a href="/#teal">teal</a>
   </div>
-</p>
-<p>
-  <a href="/all">all</a>
-</p>
-<p>
+</fieldset>
+<fieldset>
+  <legend>test various pulse</legend>
   <a href="/barker">barker</a>
   <a href="/chirp">chirp</a>
   <a href="/bchirp">barkerCodedChirp</a>
   <a href="/mseq">mseq</a>
-</p>
-<p>
+  <a href="/all">all</a>
+</fieldset>
+<fieldset>
+  <legend>commands</legend>
   <a href="/play">play</a>
   <a href="/reload">reload</a>
   <a href="/sockets" target="_blank">sockets</a>
-</p>
-<form action="/php/file_upload.php" method="post" enctype="multipart/form-data">
-  <input type="text" name="filename" value="" />
-  <input type="file" name="file" />
-  <input type="submit" value="php" />
-</form>
-<form action="/push" method="post" enctype="multipart/form-data">
-  <input type="text" name="filename" value="" />
-  <input type="file" name="file" />
-  <input type="submit" value="node" />
-</form>
+</fieldset>
+<fieldset>
+  <legend>test uploader</legend>
+  <form action="/php/upload.php" method="post" enctype="multipart/form-data">
+    <input type="text" name="filename" value="" />
+    <input type="file" name="file" />
+    <input type="submit" value="php" />
+  </form>
+  <form action="/upload" method="post" enctype="multipart/form-data">
+    <input type="text" name="filename" value="" />
+    <input type="file" name="file" />
+    <input type="submit" value="node" />
+  </form>
+</fieldset>
 </body>
 </html>
