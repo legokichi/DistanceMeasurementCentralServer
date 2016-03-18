@@ -1,6 +1,6 @@
 fs         = require("fs")
 bodyParser = require('body-parser')
-formidable = require('formidable')
+multiparty = require("multiparty")
 express    = require('express')
 http       = require('http')
 https      = require('https')
@@ -28,25 +28,31 @@ app.use('/lib',              express.static(__dirname + '/lib'))
 app.use('/dist',             express.static(__dirname + '/dist'))
 app.use("/php",                     php.cgi(__dirname + "/php"))
 
-app.post "/push", (req, res)->
-  form = new formidable.IncomingForm()
-  form.encoding = "utf-8"
-  form.uploadDir = "./uploads"
-  form.parse req, (err, fields, files)->
-    if err? ||
-       !fields.filename? ||
-       !files.file?
-      console.info err, fields, files
-      return
-    {filename} = fields
-    console.info fields
-    oldPath = './' + files.file._writeStream.path
-    newPath = './uploads/' + filename
-    fs.rename oldPath, newPath, (err)-> if (err) then throw err
-  res.statusCode = 204
-  res.send()
 
-res204 =  (fn)-> (req, res)-> res.statusCode = 204; res.send(); fn()
+res204 =  (fn)-> (req, res)-> setTimeout(-> fn(req, res)); res.sendStatus(204)
+
+app.post "/upload", (req, res)->
+  form = new multiparty.Form()
+  form.on 'error', (err)-> console.error('Error parsing form: ' + err.stack)
+  form.on 'part', (part)->
+    part.resume()
+    part.on 'error', (err)->
+      console.error("Error part", err, err.stack)
+  #form.on 'close', ->
+  form.parse req, (err, fields, files) ->
+    console.info err, fields, files
+    if err? ||
+       !fields.filename?[0]? ||
+       !(files.file?[0]?.size > 0)
+      console.error err, err?.stack, fields, files
+      throw err
+    filename = fields.filename[0]
+    oldPath = files.file[0].path
+    newPath = __dirname + '/uploads/' + filename
+    fs.rename oldPath, newPath, (err)->
+      if (err)
+        console.error err, err?.stack
+    res.sendStatus(204)
 
 app.get '/all',    res204 -> startAll()
 
@@ -116,8 +122,8 @@ start = (data)->
       .then -> requestParallel(room, "stopPulse", id)
     return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
   .then -> requestParallel(room, "stopRec")
-  .then -> requestSerial(room, "collect", {experimentID, timeStamp: Date.now()})
-  .then -> requestParallel(room, "distribute")
+  .then -> requestParallel(room, "collect", {experimentID, timeStamp: Date.now()})
+  .then (a)-> requestParallel(room, "distribute", a)
   .then -> console.info "end"
   .catch (err)->
     console.error err, err.stack
@@ -127,30 +133,36 @@ start = (data)->
 startAll = ->
   console.log "startAll"
   params = [
-    {pulseType: "barker", carrierFreq: 4410/4}
-    {pulseType: "barker", carrierFreq: 4410/2}
-    {pulseType: "barker", carrierFreq: 4410}
-    {pulseType: "chirp", length:1024*8}
-    {pulseType: "chirp", length:1024*9}
-    {pulseType: "chirp", length:1024*10}
-    {pulseType: "barkerCodedChirp", length:1024*8}
-    {pulseType: "barkerCodedChirp", length:1024*9}
-    {pulseType: "barkerCodedChirp", length:1024*10}
-    {pulseType: "mseq", length: 10, seedA: n("0010000001"), seedB: n("0011111111"),     carrierFreq: 4410/4}
-    {pulseType: "mseq", length: 10, seedA: n("0010000001"), seedB: n("0011111111"),     carrierFreq: 4410/2}
-    {pulseType: "mseq", length: 10, seedA: n("0010000001"), seedB: n("0011111111"),     carrierFreq: 4410}
-    {pulseType: "mseq", length: 11, seedA: n("01000000001"), seedB: n("10101010101"),   carrierFreq: 4410/4}
-    {pulseType: "mseq", length: 11, seedA: n("01000000001"), seedB: n("10101010101"),   carrierFreq: 4410/2}
-    {pulseType: "mseq", length: 11, seedA: n("01000000001"), seedB: n("10101010101"),   carrierFreq: 4410}
+    {pulseType: "barker", carrierFreq: 4410/32}
+    {pulseType: "barker", carrierFreq: 4410/16}
+    {pulseType: "barker", carrierFreq: 4410/8}
+    {pulseType: "chirp", length: Math.pow(2, 12)}
+    {pulseType: "chirp", length: Math.pow(2, 13)}
+    {pulseType: "chirp", length: Math.pow(2, 14)}
+    {pulseType: "chirp", length: Math.pow(2, 15)}
+    {pulseType: "chirp", length: Math.pow(2, 16)}
+    {pulseType: "barkerCodedChirp", length: 9}
+    {pulseType: "barkerCodedChirp", length: 10}
+    {pulseType: "barkerCodedChirp", length: 12}
+    {pulseType: "barkerCodedChirp", length: 13}
+    {pulseType: "barkerCodedChirp", length: 14}
+    {pulseType: "barkerCodedChirp", length: 15}
+    {pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410/4}
+    {pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410/2}
+    {pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410}
+    {pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410/4}
+    {pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410/2}
+    {pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410}
     {pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410/4}
     {pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410/2}
     {pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410}
   ]
   applicative params, (data, i)->
-    applicative [1..10], (j)->
-      console.log i+1, j+1, "/", params.length, 10
+    applicative [1..1], (j)->
+      console.log i+1, j+1, "/",  params.length, 10
       start(data)
   .then -> console.log "all task finished"
+  .catch (err)-> console.error err, err.stack
 
 
 applicative = (arr, fn)->

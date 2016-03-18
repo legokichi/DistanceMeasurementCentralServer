@@ -8,8 +8,8 @@
     "update": "rm -rf bower_components; npm update; bower update",
     "clean": "rm lib/*.js",
     "start": "supervisor --extensions coffee server.coffee & npm run build & npm run watch",
-    "stop": "killall -- supervisor --extensions coffee --debug server.coffee",
-    "build": "coffee    -c -o lib src",
+    "stop": "killall -- supervisor --extensions coffee server.coffee",
+    "build": "coffee -c -o lib src",
     "watch": "npm run build; coffee -w -c -o lib src"
   },
   "repository": {
@@ -25,7 +25,7 @@
   "dependencies": {
     "body-parser": "^1.15.0",
     "express": "^4.13.4",
-    "formidable": "^1.0.17",
+    "multiparty": "^4.1.2",
     "node-php": "mkschreder/node-php",
     "socket.io": "^1.4.4"
   },
