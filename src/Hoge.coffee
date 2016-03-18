@@ -2,8 +2,8 @@ RecordBuffer = window["duxca"]["lib"]["RecordBuffer"]
 Wave         = window["duxca"]["lib"]["Wave"]
 Detector     = window["Detector"]
 
-POST_URL = "/php/file_upload.php"
-#POST_URL = "/push"
+#POST_URL = "/php/upload.php"
+POST_URL = "/upload"
 
 VIEW_SIZE = Math.pow(2, 12)
 
@@ -69,6 +69,7 @@ class this._Hoge
     startStops  = @getStartStops()
     f32arr      = @recbuf.merge()
     int16arr    = @recbuf.toPCM()
+    results    = @detector.calc(f32arr, startStops)
     @recbuf.clear()
     sampleRate  = @actx.sampleRate
     json        = new Blob([JSON.stringify({sampleRate, startStops})])
@@ -78,10 +79,18 @@ class this._Hoge
     .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.json", file: json})
     .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.dat",  file: dat})
     .then -> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}.wav",  file: wave})
+    .then ->
+      foldable = results.map ({images, results})-> ->
+        foldable2 = Object.keys(images).map (filename)-> ->
+          getSignalImage(images[filename])
+          .then (img)-> post(POST_URL, {filename: "#{experimentID}_#{timeStamp}_#{color}_#{id}_#{filename}.jpg",  file: img})
+        return foldable2.reduce(((a, b)-> a.then -> b()), Promise.resolve())
+      return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
     .catch (err)-> console.error(err); setTimeout -> throw err
-    .then -> next()
+    .then -> next({id, color, results: results.map ({results})-> results})
   distribute: (data)-> (next)=>
     # data: [{id:string, results: [{id, max_offset, pulseTime, max_val}]}]
+    console.log data
     next()
   play: (data)-> console.log "play", data
   volume: (data)-> console.log "volume", data
