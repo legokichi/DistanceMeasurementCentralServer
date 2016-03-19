@@ -158,7 +158,7 @@ startAll = ->
     {pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410}
   ]
   applicative params, (data, i)->
-    applicative [1..1], (j)->
+    applicative [1..100], (j)->
       console.log i+1, j+1, "/",  params.length, 10
       start(data)
   .then -> console.log "all task finished"
