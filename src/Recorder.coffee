@@ -10,7 +10,7 @@ __VIEW_SIZE__ = Math.pow(2, 12)
 class this.Recorder
   constructor: (actx, color)->
     @actx        = actx
-    @color       = color
+    @alias       = color
     @isRecording = false
     @nextTick    = null
     @pulseStartTime = {}
@@ -63,35 +63,40 @@ class this.Recorder
       stopPtr  = (@pulseStopTime[id] - recStartTime) * @recbuf.sampleRate|0
       {id, startPtr, stopPtr}
     id          = socket.id
-    alias       = @color
+    alias       = @alias
     sampleRate  = @actx.sampleRate
     f32arr      = @recbuf.merge()
     int16arr    = @recbuf.toPCM()
-    results     = @detector.calc(f32arr, startStops)
-    pulseInfos  = results.map ({pulseInfo})-> pulseInfo
-    resObj      = {id, alias, sampleRate, recStartTime, recStopTime, startStops, pulseInfos}
+    @recbuf.clear()
+    @detector.calc(f32arr, startStops)
+    .then (results)=>
+      pulseInfos  = results.map ({pulseInfo})-> pulseInfo
+      resObj      = {experimentID, timeStamp, id, alias, sampleRate, recStartTime, recStopTime, startStops, pulseInfos}
+      imageses    = results.map ({images})-> images
+      @upload(resObj, f32arr, int16arr, imageses)
+      .then -> next(resObj)
+  upload: (resObj, f32arr, int16arr, imageses)->
+    {experimentID, timeStamp, id, alias, sampleRate, recStartTime, recStopTime, startStops, pulseInfos} = resObj
     json        = new Blob([JSON.stringify(resObj, null, "  ")])
     dat         = new Blob([f32arr])
     wave        = new Wave(1, sampleRate, int16arr).toBlob()
     prefix      = "#{experimentID}_#{timeStamp}_collect_#{alias}_#{id}"
-    @recbuf.clear()
-    Promise.resolve()
+    return Promise.resolve()
     .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.json", file: json})
-    .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.dat",  file: dat})
     .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.wav",  file: wave})
+    .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.dat",  file: dat})
     .then ->
-      foldable = results.map ({images})-> ->
+      foldable = imageses.map (images)-> ->
         foldable2 = Object.keys(images).map (filename)-> ->
           getSignalImage(images[filename])
           .then (img)-> post(__UPLOADER_POST_URL__, {filename: "#{prefix}_#{filename}.jpg",  file: img})
         return foldable2.reduce(((a, b)-> a.then -> b()), Promise.resolve())
       return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
     .catch (err)-> console.error(err)
-    .then -> next(resObj)
   distribute: (data)-> (next)=>
     {experimentID, timeStamp, datas} = data
     id      = socket.id
-    alias   = @color
+    alias   = @alias
     prefix  = "#{experimentID}_#{timeStamp}_distribute_#{alias}_#{id}"
     results = @detector.distribute(datas)
     json    = new Blob([JSON.stringify(results, null, "  ")])

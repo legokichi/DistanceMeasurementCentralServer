@@ -67,22 +67,26 @@ class this.Detector
     ###
     {sampleRate} = opt
     sampleRate ?= @actx.sampleRate
+    pulseType  = @pulseType
     windowSize = Math.pow(2, 8) # 周波数分解能
     slideWidth = Math.pow(2, 4) # 時間分解能
+    matchedA   = @matchedA
+    matchedB   = @matchedB
     #new SignalViewer(f32arr.length/slideWidth, windowSize/2).draw(f32arr, {sampleRate}).appendTo(document.body)
     #new SignalViewer(1024, 256).drawSpectrogram(f32arr, {sampleRate, windowSize, slideWidth}).appendTo(document.body)
-    return switch @pulseType
-      when "barker"           then startStops.map(@calc_barker(f32arr, sampleRate))
-      when "chirp"            then startStops.map(@calc_chirp(f32arr, sampleRate))
-      when "barkerCodedChirp" then startStops.map(@calc_barkerCodedChirp(f32arr, sampleRate))
-      when "mseq"             then startStops.map(@calc_mseq(f32arr, sampleRate))
+    result = switch @pulseType
+      when "barker"           then startStops.map(@calc_barker(          f32arr, sampleRate, matchedA))
+      when "chirp"            then startStops.map(@calc_chirp(           f32arr, sampleRate, matchedA))
+      when "barkerCodedChirp" then startStops.map(@calc_barkerCodedChirp(f32arr, sampleRate, matchedA))
+      when "mseq"             then startStops.map(@calc_mseq(            f32arr, sampleRate, matchedA, matchedB))
       else                         throw new Error "uknown pulse type #{pulseType}"
-  calc_barker: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
+    return Promise.resolve(result)
+  calc_barker: (rawdata, sampleRate, matchedA)-> ({id, startPtr, stopPtr})=>
     counter = 0
     images = {}
     filename_head = "-TO-#{id}_"
     section = rawdata.subarray(startPtr, stopPtr)
-    correlA = Signal.fft_smart_overwrap_correlation(section, @matchedA)
+    correlA = Signal.fft_smart_overwrap_correlation(section, matchedA)
     images[filename_head+"#{counter++}section"] = section
     images[filename_head+"#{counter++}correlA"] = correlA
     [maxA, idxA] = Signal.Statictics.findMax(correlA)
@@ -102,24 +106,24 @@ class this.Detector
       images,
       pulseInfo: {id, max_offset, pulseTime, max_val}
     }
-  calc_chirp: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
-    @calc_barker(rawdata, sampleRate)({id, startPtr, stopPtr})
-  calc_barkerCodedChirp: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
-    @calc_barker(rawdata, sampleRate)({id, startPtr, stopPtr})
-  calc_mseq: (rawdata, sampleRate)-> ({id, startPtr, stopPtr})=>
+  calc_chirp: (rawdata, sampleRate, matchedA)-> ({id, startPtr, stopPtr})=>
+    @calc_barker(rawdata, sampleRate, matchedA)({id, startPtr, stopPtr})
+  calc_barkerCodedChirp: (rawdata, sampleRate, matchedA)-> ({id, startPtr, stopPtr})=>
+    @calc_barker(rawdata, sampleRate, matchedA)({id, startPtr, stopPtr})
+  calc_mseq: (rawdata, sampleRate, matchedA, matchedB)-> ({id, startPtr, stopPtr})=>
     images = {}
     counter = 0
     filename_head = "-TO-#{id}_"
     section = rawdata.subarray(startPtr, stopPtr)
-    correlA = Signal.fft_smart_overwrap_correlation(section, @matchedA)
-    correlB = Signal.fft_smart_overwrap_correlation(section, @matchedB)
+    correlA = Signal.fft_smart_overwrap_correlation(section, matchedA)
+    correlB = Signal.fft_smart_overwrap_correlation(section, matchedB)
     images[filename_head+"#{counter++}section"] = section
     images[filename_head+"#{counter++}correlA"] = correlA
     images[filename_head+"#{counter++}correlB"] = correlB
     [_, idxA] = Signal.Statictics.findMax(correlA)
     [_, idxB] = Signal.Statictics.findMax(correlB)
-    relB = idxA + @matchedA.length*2; if relB < 0 then relB = 0; # Bの位置とAから見たBの位置
-    relA = idxB - @matchedA.length*2; if relA < 0 then relA = 0; # Aの位置とBから見たAの位置
+    relB = idxA + matchedA.length*2; if relB < 0 then relB = 0; # Bの位置とAから見たBの位置
+    relA = idxB - matchedA.length*2; if relA < 0 then relA = 0; # Aの位置とBから見たAの位置
     stdscoreA = do ->
       ave = Signal.Statictics.average(correlA)
       vari = Signal.Statictics.variance(correlA)
