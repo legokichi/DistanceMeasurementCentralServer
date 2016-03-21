@@ -122,8 +122,8 @@ start = (data)->
       .then -> requestParallel(room, "stopPulse", id)
     return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
   .then -> requestParallel(room, "stopRec")
-  .then -> requestParallel(room, "collect", {experimentID, timeStamp: Date.now()})
-  .then (a)-> requestParallel(room, "distribute", {experimentID, timeStamp: Date.now(), datas: a})
+  .then -> requestParallel(room, "collect", {experimentID, pulseType, timeStamp: Date.now()})
+  .then (a)-> requestParallel(room, "distribute", {experimentID, pulseType, timeStamp: Date.now(), datas: a})
   .then -> console.info "end"
   .catch (err)->
     console.error err, err.stack
@@ -133,36 +133,40 @@ start = (data)->
 startAll = ->
   console.log "startAll"
   params = [
-    {pulseType: "barker", carrierFreq: 4410/32}
-    {pulseType: "barker", carrierFreq: 4410/16}
-    {pulseType: "barker", carrierFreq: 4410/8}
-    {pulseType: "chirp", length: Math.pow(2, 12)}
-    {pulseType: "chirp", length: Math.pow(2, 13)}
-    {pulseType: "chirp", length: Math.pow(2, 14)}
-    {pulseType: "chirp", length: Math.pow(2, 15)}
-    {pulseType: "chirp", length: Math.pow(2, 16)}
-    {pulseType: "barkerCodedChirp", length: 9}
-    {pulseType: "barkerCodedChirp", length: 10}
-    {pulseType: "barkerCodedChirp", length: 12}
-    {pulseType: "barkerCodedChirp", length: 13}
-    {pulseType: "barkerCodedChirp", length: 14}
-    {pulseType: "barkerCodedChirp", length: 15}
-    {pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410/4}
-    {pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410/2}
-    {pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410}
-    {pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410/4}
-    {pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410/2}
-    {pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410}
-    {pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410/4}
+    #{pulseType: "barker", carrierFreq: 4410/32}
+    #{pulseType: "barker", carrierFreq: 4410/16}
+    #{pulseType: "barker", carrierFreq: 4410/8}
+    #{pulseType: "chirp", length: Math.pow(2, 12)}
+    #{pulseType: "chirp", length: Math.pow(2, 13)}
+    #{pulseType: "chirp", length: Math.pow(2, 14)}
+    #{pulseType: "chirp", length: Math.pow(2, 15)}
+    #{pulseType: "chirp", length: Math.pow(2, 16)}
+    #{pulseType: "barkerCodedChirp", length: 9}
+    #{pulseType: "barkerCodedChirp", length: 10}
+    #{pulseType: "barkerCodedChirp", length: 12}
+    #{pulseType: "barkerCodedChirp", length: 13}
+    #{pulseType: "barkerCodedChirp", length: 14}
+    #{pulseType: "barkerCodedChirp", length: 15}
+    #{pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410/4}
+    #{pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410/2}
+    #{pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410}
+    #{pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410/4}
+    #{pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410/2}
+    #{pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410}
+    #{pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410/4}
     {pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410/2}
     {pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410}
   ]
-  applicative params, (data, i)->
-    applicative [1..100], (j)->
-      console.log i+1, j+1, "/",  params.length, 10
-      start(data)
-  .then -> console.log "all task finished"
-  .catch (err)-> console.error err, err.stack
+  N = 100
+  io.of("/").emit("reload")
+  next = ->
+    applicative params, (data, i)->
+      applicative [1...N], (j)->
+        console.log i+1, j+1, "/",  params.length, N
+        start(data)
+    .then -> console.log "all task finished"
+    .catch (err)-> console.error err, err.stack
+  setTimeout(next, 5000)
 
 
 applicative = (arr, fn)->
