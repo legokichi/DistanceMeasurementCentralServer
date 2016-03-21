@@ -1,6 +1,7 @@
 RecordBuffer = window["duxca"]["lib"]["RecordBuffer"]
 Wave         = window["duxca"]["lib"]["Wave"]
 Detector     = window["Detector"]
+JSZip        = window["JSZip"]
 
 #__UPLOADER_POST_URL__ = "/php/upload.php"
 __UPLOADER_POST_URL__ = "/upload"
@@ -55,7 +56,7 @@ class this.Recorder
     @isRecording = false
     next()
   collect: (data)-> (next)=>
-    {experimentID, timeStamp}  = data
+    {experimentID, pulseType, timeStamp}  = data
     recStartTime = @recbuf.sampleTimes[0] - (@recbuf.bufferSize / @recbuf.sampleRate)
     recStopTime  = @recbuf.sampleTimes[@recbuf.sampleTimes.length-1]
     startStops   = Object.keys(@pulseStartTime).map (id)=>
@@ -71,33 +72,34 @@ class this.Recorder
     @detector.calc(f32arr, startStops)
     .then (results)=>
       pulseInfos  = results.map ({pulseInfo})-> pulseInfo
-      resObj      = {experimentID, timeStamp, id, alias, sampleRate, recStartTime, recStopTime, startStops, pulseInfos}
+      resObj      = {experimentID, pulseType, timeStamp, id, alias, sampleRate, recStartTime, recStopTime, startStops, pulseInfos}
       imageses    = results.map ({images})-> images
       @upload(resObj, f32arr, int16arr, imageses)
       .then -> next(resObj)
   upload: (resObj, f32arr, int16arr, imageses)->
-    {experimentID, timeStamp, id, alias, sampleRate, recStartTime, recStopTime, startStops, pulseInfos} = resObj
-    json        = new Blob([JSON.stringify(resObj, null, "  ")])
-    dat         = new Blob([f32arr])
-    wave        = new Wave(1, sampleRate, int16arr).toBlob()
-    prefix      = "#{experimentID}_#{timeStamp}_collect_#{alias}_#{id}"
-    return Promise.resolve()
-    .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.json", file: json})
-    .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.wav",  file: wave})
-    .then -> post(__UPLOADER_POST_URL__, {filename: "#{prefix}.dat",  file: dat})
+    {experimentID, pulseType, timeStamp, id, alias, sampleRate, recStartTime, recStopTime, startStops, pulseInfos} = resObj
+    json        = JSON.stringify(resObj, null, "  ")
+    dat         = f32arr.buffer
+    wave        = new Wave(1, sampleRate, int16arr).view.buffer
+    prefix      = "#{experimentID}_#{pulseType}_#{timeStamp}_collect_#{alias}_#{id}"
+    jszip = new JSZip()
+    jszip.file("#{prefix}.json", json)
+    jszip.file("#{prefix}.wav", wave)
+    jszip.file("#{prefix}.dat", dat)
+    Promise.all imageses.map (images)->
+      Promise.all Object.keys(images).map (filename)->
+        getSignalImage(images[filename]).then (blob)->
+          blobToBuffer(blob).then (jpg)->
+            jszip.file("#{prefix}_#{filename}.jpg", jpg)
     .then ->
-      foldable = imageses.map (images)-> ->
-        foldable2 = Object.keys(images).map (filename)-> ->
-          getSignalImage(images[filename])
-          .then (img)-> post(__UPLOADER_POST_URL__, {filename: "#{prefix}_#{filename}.jpg",  file: img})
-        return foldable2.reduce(((a, b)-> a.then -> b()), Promise.resolve())
-      return foldable.reduce(((a, b)-> a.then -> b()), Promise.resolve())
+      zip = jszip.generate({type:"blob", compressionOptions:9, })
+      post(__UPLOADER_POST_URL__, {filename: "#{prefix}.zip",  file: zip})
     .catch (err)-> console.error(err)
   distribute: (data)-> (next)=>
-    {experimentID, timeStamp, datas} = data
+    {experimentID, pulseType, timeStamp, datas} = data
     id      = socket.id
     alias   = @alias
-    prefix  = "#{experimentID}_#{timeStamp}_distribute_#{alias}_#{id}"
+    prefix  = "#{experimentID}_#{pulseType}_#{timeStamp}_distribute_#{alias}_#{id}"
     results = @detector.distribute(datas)
     json    = new Blob([JSON.stringify(results, null, "  ")])
     Promise.resolve()
@@ -119,9 +121,19 @@ post = (url, param)->
 
 
 
-getSignalImage = (arr, cb)->
+getSignalImage = (arr)->
   new Promise (resolve)->
     width = if __VIEW_SIZE__ < arr.length then __VIEW_SIZE__ else arr.length
     render = new SignalViewer(width, 64)
     render.draw(arr)
     render.cnv.toBlob(resolve, "image/jpeg", 0.5)
+
+
+blobToBuffer = (blob)->
+  new Promise (resolve, reject)->
+    reader = new FileReader()
+    reader.onerror = reject
+    reader.onload = ->
+      buffer = this.result
+      resolve(buffer)
+    reader.readAsArrayBuffer(blob)

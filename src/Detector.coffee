@@ -92,6 +92,7 @@ class this.Detector
     [maxA, idxA] = Signal.Statictics.findMax(correlA)
     range = (__MULTIPASS_DISTANCE__/__SOUND_OF_SPEED__*sampleRate)|0
     marker = new Uint8Array(correlA.length)
+    while idxA-range < 0 then range /= 2
     marker[idxA-range] = 255
     marker[idxA] = 255
     marker[idxA+range] = 255
