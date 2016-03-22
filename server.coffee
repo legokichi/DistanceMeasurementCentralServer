@@ -133,31 +133,31 @@ start = (data)->
 startAll = ->
   console.log "startAll"
   params = [
-    #{pulseType: "barker", carrierFreq: 4410/32}
-    #{pulseType: "barker", carrierFreq: 4410/16}
-    #{pulseType: "barker", carrierFreq: 4410/8}
-    #{pulseType: "chirp", length: Math.pow(2, 12)}
-    #{pulseType: "chirp", length: Math.pow(2, 13)}
-    #{pulseType: "chirp", length: Math.pow(2, 14)}
-    #{pulseType: "chirp", length: Math.pow(2, 15)}
-    #{pulseType: "chirp", length: Math.pow(2, 16)}
-    #{pulseType: "barkerCodedChirp", length: 9}
-    #{pulseType: "barkerCodedChirp", length: 10}
-    #{pulseType: "barkerCodedChirp", length: 12}
-    #{pulseType: "barkerCodedChirp", length: 13}
-    #{pulseType: "barkerCodedChirp", length: 14}
-    #{pulseType: "barkerCodedChirp", length: 15}
-    #{pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410/4}
-    #{pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410/2}
-    #{pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410}
-    #{pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410/4}
-    #{pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410/2}
-    #{pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410}
-    #{pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410/4}
+    {pulseType: "barker", carrierFreq: 4410/32}
+    {pulseType: "barker", carrierFreq: 4410/16}
+    {pulseType: "barker", carrierFreq: 4410/8}
+    {pulseType: "chirp", length: Math.pow(2, 12)}
+    {pulseType: "chirp", length: Math.pow(2, 13)}
+    {pulseType: "chirp", length: Math.pow(2, 14)}
+    {pulseType: "chirp", length: Math.pow(2, 15)}
+    {pulseType: "chirp", length: Math.pow(2, 16)}
+    {pulseType: "barkerCodedChirp", length: 9}
+    {pulseType: "barkerCodedChirp", length: 10}
+    {pulseType: "barkerCodedChirp", length: 12}
+    {pulseType: "barkerCodedChirp", length: 13}
+    {pulseType: "barkerCodedChirp", length: 14}
+    {pulseType: "barkerCodedChirp", length: 15}
+    {pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410/4}
+    {pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410/2}
+    {pulseType: "mseq", length: 10, seedA: n("0010000001"),   seedB: n("0011111111"),   carrierFreq: 4410}
+    {pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410/4}
+    {pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410/2}
+    {pulseType: "mseq", length: 11, seedA: n("01000000001"),  seedB: n("10101010101"),  carrierFreq: 4410}
+    {pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410/4}
     {pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410/2}
     {pulseType: "mseq", length: 12, seedA: n("011110111111"), seedB: n("100101000001"), carrierFreq: 4410}
   ]
-  N = 100
+  N = 1
   io.of("/").emit("reload")
   next = ->
     applicative params, (data, i)->
