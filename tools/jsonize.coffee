@@ -1,16 +1,17 @@
 cp = require 'child_process'
-fs     = require 'fs'
+fs = require 'fs'
+reduce = (arr,id,f)-> arr.reduce(f,id)
 
 datas = fs.readdirSync(".")
 .filter (a)-> /^(\d+)/.test(a)
 .map (dir)->
   ls = fs.readdirSync(dir)
-  exps = ls.reduce ((arr, file)->
+  exps = reduce ls, [], (arr, file)->
     [_,exp,type]=(/^(\d+)\_([A-Za-z]+)\.json$/.exec(file)||[null,"",""])
     if exp isnt ""
       param = JSON.parse(fs.readFileSync(dir+"/"+file))
       arr.push({exp,type,dir,file,param})
-    arr), []
+    arr
   exps.map ({exp,type,dir,file,param})->
     reg = new RegExp "^#{exp}\\_(\\d+)\\_distribute\\_([A-Za-z]+)\\_([A-Za-z0-9_]+)\\.json$"+"|"+
                      "^#{exp}\\_#{type}\\_(\\d+)\\_distribute\\_([A-Za-z]+)\\_([A-Za-z0-9_]+)\\.json$"
@@ -24,4 +25,30 @@ datas = fs.readdirSync(".")
     {exp,type,param,distribute}
 .reduce (arr, a)-> arr.concat a
 
-console.log JSON.stringify(datas)
+datas = datas.filter ({exp})-> exp > 1458359600000
+types = reduce datas, {}, (o, a)-> {type}=a ;o[type] ?= []; o[type].push a; o
+Object.keys(types).forEach (key)->
+  iter = switch key
+    when "barker" then (o, a)->
+      {param: {carrierFreq}} = a
+      o[carrierFreq] ?= []
+      o[carrierFreq].push a
+      o
+    when "chirp" then (o, a)->
+      {param: {length}} = a
+      o[length] ?= []
+      o[length].push a
+      o
+    when "barkerCodedChirp" then (o, a)->
+      {param: {length}} = a
+      o[length] ?= []
+      o[length].push a
+      o
+    when "mseq" then (o, a)->
+      {param: {carrierFreq, length}} = a
+      o[carrierFreq+":"+length] ?= []
+      o[carrierFreq+":"+length].push a
+      o
+  types[key] = reduce types[key], {}, iter
+
+console.log JSON.stringify(types)

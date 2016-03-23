@@ -1,5 +1,5 @@
 cp = require 'child_process'
-fs     = require 'fs'
+fs = require 'fs'
 
 o = fs.readdirSync(".")
 .map (a)-> [(/^(\d+)/.exec(a) || [null, ""])[1], a]
