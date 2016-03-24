@@ -1,0 +1,90 @@
+%
+% $Id: blank.tex,v 2.0 2010-01-05 18:50:50+09 kobayasi Exp $
+%
+% Mar 21, 2001:  Revision Control Started!!
+%
+\documentclass[11pt]{jarticle}
+\usepackage{newcent}             % PDFへの変換後の品質を高める
+%
+%\usepackage[doctor]{gaiyo}      % 博士論文要旨の場合
+\usepackage[master]{gaiyo}      % 修士論文要旨の場合
+%\usepackage{gaiyo}               % 卒業研究概要の場合
+%\usepackage[junior]{gaiyo}      % 専門演習レポートの場合
+
+%\usepackage{graphicx}
+\usepackage[dvipdfmx]{graphicx}
+\usepackage{epsf}
+\usepackage{comment}
+\usepackage{subfigure}
+\usepackage{here}
+
+\makeatletter
+\newcommand{\figcaption}[1]{\def\@captype{figure}\caption{#1}}
+\newcommand{\tblcaption}[1]{\def\@captype{table}\caption{#1}}
+\makeatother
+
+\title{複数の携帯端末による教室空間の空間音響環境構築手法の検討}
+\id{14M7102}
+\author{伊納洋佑}
+\teacher{米澤朋子}
+
+\begin{document}
+\maketitle
+
+\section{はじめに}
+\input{gaiyou-hazimeni.tex}
+
+\section{提案システム}
+\input{gaiyou-teian.tex}
+
+\section{検証}
+\input{gaiyou-kenshou.tex}
+
+\section{おわりに}
+\input{gaiyou-owarini.tex}
+
+
+\begin{thebibliography}{10}
+
+\bibitem{shibata14} 柴田一暁, 小野順貴, 亀岡弘和. 音の発信を利用したキャリブレーションに基づくアドホックマイクロホンアレイによる音源定位. 音講論 （春）, pp. 707--710，2014.
+\bibitem{dbap}      Trond Lossius, Pascal Baltazar, and Theo de la Hogue. DBAP–distance-based amplitude panning. Proc of ICMC 2009, pp.489--492, 2009.
+\bibitem{tpsn}      S. Ganeriwal, R. Kumar, Ram, M.B. Srivastava. Timing-sync protocol for sensor networks. In Proceedings of the 1st international conference on Embedded networked sensor systems. ACM,  pp. 138-149, 2003.
+
+
+
+
+\begin{figure}[H]
+  \def\@captype{table}
+  \begin{minipage}{0.3\hsize}
+      \includegraphics[clip,width=1\hsize]{img/PC_haichi.png}
+      \caption{PC配置}
+      \label{fig:__relpos}
+  \end{minipage}
+  %
+  \hfill
+  %
+  \begin{minipage}{0.68\hsize}
+      %\caption{50回試行時の端末間距離計測結果}
+      \tblcaption{50回試行時の端末間距離計測結果}
+      \label{tab:__estdistance}
+      \begin{tabular}{l|rrrrr}
+        \hline
+        {\footnotesize  端末間}&{\footnotesize 平均}&{\footnotesize 標準偏差}&{\footnotesize 実測距離(m) }\\
+        \hline
+        {\footnotesize A-D }&{\footnotesize 11.71889953}&{\footnotesize 1.24793883}&{\footnotesize 11.10 }\\
+        {\footnotesize B-D }&{\footnotesize 7.767573696}&{\footnotesize 0.583510141}&{\footnotesize 7.77 }\\
+        {\footnotesize C-D }&{\footnotesize 6.72675737}&{\footnotesize 0.774180135}&{\footnotesize 6.72 }\\
+        {\footnotesize A-B }&{\footnotesize 6.564537924}&{\footnotesize 1.067679838}&{\footnotesize 6.83 }\\
+        {\footnotesize A-C }&{\footnotesize 7.300425749}&{\footnotesize 1.283308926}&{\footnotesize 6.93 }\\
+        {\footnotesize B-C }&{\footnotesize 4.771470221}&{\footnotesize 0.664454607}&{\footnotesize 4.92 }\\
+        \hline
+      \end{tabular}
+  \end{minipage}
+\end{figure}
+
+
+
+\end{thebibliography}
+
+\end{document}
+\begin{center}  \begin{tabular}{@{} ccc @{}}    \hline    • & • & • \\    \hline    • & • & • \\    • & • & • \\    • & • & • \\    \hline  \end{tabular}\end{center}

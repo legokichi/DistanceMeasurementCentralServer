@@ -1,0 +1,110 @@
+\documentclass[11pt]{jreport}
+%\documentclass[11pt,twoside]{jreport} %印刷に出すときは両面見開きにするかな
+
+\usepackage{fancyhdr}
+%\usepackage{graphicx}
+\usepackage[dvipdfmx]{graphicx}
+%\usepackage[dvipdfm]{graphicx,color}
+\usepackage{epsf}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{comment}
+\usepackage{subfigure}
+\usepackage{here}
+\usepackage[all]{xy}
+
+\let\origtitle\title
+\let\origauthor\author
+
+\makeatletter
+
+\newcommand{\figcaption}[1]{\def\@captype{figure}\caption{#1}}
+\newcommand{\tblcaption}[1]{\def\@captype{table}\caption{#1}}
+
+\newcommand{\thetitle}{a}
+\newcommand{\theauthor}{a}
+
+\renewcommand{\bibname}{参考文献}
+
+\renewcommand{\chapter}{%
+  \if@openright\cleardoublepage\else\clearpage\fi
+  \thispagestyle{fancy}
+  \global\@topnum\z@
+  \@afterindenttrue
+  \secdef\@chapter\@schapter
+}
+
+\makeatother
+
+\pagestyle{fancy}
+
+\fancyhead{}
+\rhead{\footnotesize\thepage}
+\lhead{\footnotesize\leftmark}
+\chead{\footnotesize\rightmark}
+\cfoot{}
+
+\renewcommand{\chaptermark}[1]{\markboth{第\ \normalfont\thechapter\ 章~#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection #1}{}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\renewcommand{\title}[1]{\lfoot{\footnotesize{#1}\origtitle{#1}}\renewcommand{\thetitle}{#1}}
+\renewcommand{\author}[1]{\rfoot{\footnotesize{#1}\origauthor{#1}}\renewcommand{\theauthor}{#1}}
+
+\begin{comment}
+  \lhead[{\footnotesize\hspace{1em}\thepage\hspace{2em}\rightmark}]{}
+  \rhead[]{{\footnotesize\hspace{1em}\leftmark\hspace{2em}\thepage}} %見開き用
+\end{comment}
+
+\newcommand{\athr}[1]{\author{#1}}
+
+
+\renewcommand\floatpagefraction{.001}
+\makeatletter
+\setlength\@fpsep{\textheight}
+\makeatother
+
+
+%ここから
+\title{複数の携帯端末による教室空間の空間音響環境構築手法の検討}
+\author{14M7102\\伊納洋佑}
+\date{\today}
+
+\let\origtitle\title
+\let\origauthor\author
+
+\begin{document}
+
+  \thispagestyle{empty}
+  \begin{center}
+    \vspace{1.5cm}\huge{\thetitle}\\ \vspace{3.0cm}
+    \LARGE{総合情報学研究科}\\
+    \LARGE{知識情報学専攻}\\
+    \vspace{0.8cm}\Large{インタラクションの認知・メディア・文化}\\
+    \vspace{0.8cm}\LARGE{\theauthor}\\ \vspace{1.0cm}
+  \end{center}
+
+\def\thepage{}
+  %内容
+  \input{abst.tex}
+  %もくじ
+  \tableofcontents
+  \listoftables
+  \listoffigures
+
+\pagestyle{fancy}
+  \input{intro.tex}
+  \input{related.tex}
+  \input{system.tex}
+  \input{exp.tex}
+  \input{discus.tex}
+  \input{concl.tex}
+  \input{bib.tex}
+  \input{ack.tex}
+  \input{apend.tex}
+  \input{list.tex}
+
+
+
+\end{document}

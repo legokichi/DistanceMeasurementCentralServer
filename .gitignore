@@ -1,3 +1,15 @@
 .DS_Store
 Icon
 /ssl
+*.aux
+*.log
+*.gz
+*.dvi
+*.pdf
+*.lof
+*.lot
+*.toc
+*.eps
+*.jpeg
+uploads
+node_modules

@@ -1,0 +1,32 @@
+%\chapter{納豆菌の菌糸直径計測および菌糸本数推定手法}
+%\section{納豆菌の直径計測手法}
+%\section{納豆菌の菌糸本数推定手法}
+
+\chapter{提案システム}
+
+提案システムでは，教室などの閉鎖空間において，
+個人が所有する複数のスマートデバイスの音声出力をネットワークを介し同期させ制御することで，スピーカアレイを構築する(図\ref{fig:shikumi2})．
+空間内に配置した仮想音源の位置に基づき，その音源位置を囲む最寄りの3つのスマートデバイス（ノード）を設定し振幅パニングすることで，現実世界における想定位置で音源を鳴らして定位する．
+このようなスピーカアレイを構築するにあたり，実空間に分布する複数のスマートデバイスの相対位置を推定するとともに，端末間での時刻同期が必要不可欠である．
+
+\begin{figure}[p]\centering
+  \hspace{-2mm}\includegraphics[clip,width=1.1\hsize]{img/shikumi3.png}
+  \caption{提案システムの概念}\label{fig:shikumi2}
+\end{figure}
+
+この章では，まず，提案システムで用いた
+相対位置に基づく音像定位手法について触れる．
+次に，その手法を実現するための
+端末間の音声パルスの到達時間差による
+時刻同期手法および相対距離計測手法，
+そして相対位置推定手法を述べる．
+さらに，パルス圧縮を用いた信号検出手法を示し，
+最後に，スピーカアレイ全体の制御手法について解説する．
+
+
+\input{system_dbap.tex}
+\input{system_sync_measure.tex}
+\input{system_relpos.tex}
+\input{system_signal_detection.tex}
+\input{system_cal.tex}
+\input{system_control.tex}
