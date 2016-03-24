@@ -13,3 +13,5 @@ Icon*
 *.jpeg
 uploads
 node_modules
+bower_components
+server.log

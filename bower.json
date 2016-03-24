@@ -4,10 +4,10 @@
   "description": "jinshinbaibai",
   "license": "MIT",
   "dependencies": {
-    "duxca.serverworker.js": "legokichi/ServerWorker",
+    "duxca.serverworker.js": "legokichi/ServerWorker#43f2db0d4fc5041510b0dc1c4d8c4f638f847670",
     "jquery": "^2.2.1",
-    "Signal.ts": "legokichi/Signal.ts",
-    "duxca.lib.js": "legokichi/duxca.lib.js",
+    "Signal.ts": "legokichi/Signal.ts#fa0d527fce904ffe191a431a1c720444467c51aa",
+    "duxca.lib.js": "legokichi/duxca.lib.js#ced590226fe18bfe417c0f5e3db4e73085b27fdf",
     "jszip": "^2.5.0"
   },
   "devDependencies": {},
