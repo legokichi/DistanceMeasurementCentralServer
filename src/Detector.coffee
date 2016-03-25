@@ -1,5 +1,6 @@
-SignalViewer = window["SignalViewer"]
-Signal = window["Signal"]
+SignalViewer = window["duxca"]["lib"]["SignalViewer"]
+Signal = window["duxca"]["lib"]["Signal"]
+Statistics = window["duxca"]["lib"]["Statistics"]
 OSC = window["duxca"]["lib"]["OSC"]
 
 __MULTIPASS_DISTANCE__ = 9
@@ -89,7 +90,7 @@ class this.Detector
     correlA = Signal.fft_smart_overwrap_correlation(section, matchedA)
     images[filename_head+"#{counter++}section"] = section
     images[filename_head+"#{counter++}correlA"] = correlA
-    [maxA, idxA] = Signal.Statictics.findMax(correlA)
+    [maxA, idxA] = Statistics.findMax(correlA)
     range = (__MULTIPASS_DISTANCE__/__SOUND_OF_SPEED__*sampleRate)|0
     marker = new Uint8Array(correlA.length)
     while idxA-range < 0 then range /= 2
@@ -121,18 +122,18 @@ class this.Detector
     images[filename_head+"#{counter++}section"] = section
     images[filename_head+"#{counter++}correlA"] = correlA
     images[filename_head+"#{counter++}correlB"] = correlB
-    [_, idxA] = Signal.Statictics.findMax(correlA)
-    [_, idxB] = Signal.Statictics.findMax(correlB)
+    [_, idxA] = Statistics.findMax(correlA)
+    [_, idxB] = Statistics.findMax(correlB)
     relB = idxA + matchedA.length*2; if relB < 0 then relB = 0; # Bの位置とAから見たBの位置
     relA = idxB - matchedA.length*2; if relA < 0 then relA = 0; # Aの位置とBから見たAの位置
     stdscoreA = do ->
-      ave = Signal.Statictics.average(correlA)
-      vari = Signal.Statictics.variance(correlA)
+      ave = Statistics.average(correlA)
+      vari = Statistics.variance(correlA)
       if vari is 0 then vari = 0.000001
       (x)-> 10 * (x - ave) / vari + 50
     stdscoreB = do ->
-      ave = Signal.Statictics.average(correlB)
-      vari = Signal.Statictics.variance(correlB)
+      ave = Statistics.average(correlB)
+      vari = Statistics.variance(correlB)
       if vari is 0 then vari = 0.000001
       (x)-> 10 * (x - ave) / vari + 50
     scoreB = stdscoreB(correlB[idxB]) + stdscoreA(correlA[relA])
@@ -140,11 +141,11 @@ class this.Detector
     range = (__MULTIPASS_DISTANCE__/__SOUND_OF_SPEED__*sampleRate)|0
     if relA > 0 && scoreB > scoreA
       # Bが正しいのでAを修正
-      [_, idx] = Signal.Statictics.findMax(correlA.subarray(relA-range, relA+range))
+      [_, idx] = Statistics.findMax(correlA.subarray(relA-range, relA+range))
       idxA = relA - range + idx
     else
       # Aが正しいのでBを修正
-      [_, idx] = Signal.Statictics.findMax(correlB.subarray(relB-range, relB+range))
+      [_, idx] = Statistics.findMax(correlB.subarray(relB-range, relB+range))
       idxB = relB - range + idx
     # 音圧ピーク値
     maxA = correlA[idxA]
@@ -179,7 +180,7 @@ class this.Detector
     images[filename_head+"#{counter++}logs"] = logs
     lowpass = Signal.lowpass(logs, sampleRate, 800, 1)
     images[filename_head+"#{counter++}lowpass"] = lowpass
-    [max, _idx] = Signal.Statictics.findMax(lowpass)
+    [max, _idx] = Statistics.findMax(lowpass)
     i = 1
     i++ while i < _idx && lowpass[i] < max/5
     i++ while i < _idx && lowpass[i] > lowpass[i-1]

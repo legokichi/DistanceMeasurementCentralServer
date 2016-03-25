@@ -1,3 +1,4 @@
+SignalViewer = window["duxca"]["lib"]["SignalViewer"]
 RecordBuffer = window["duxca"]["lib"]["RecordBuffer"]
 Wave         = window["duxca"]["lib"]["Wave"]
 Detector     = window["Detector"]
@@ -94,7 +95,7 @@ class this.Recorder
     .then ->
       zip = jszip.generate({type:"blob", compressionOptions:9, })
       post(__UPLOADER_POST_URL__, {filename: "#{prefix}.zip",  file: zip})
-    .catch (err)-> console.error(err)
+    .catch (err)-> console.error(err, err.stack)
   distribute: (data)-> (next)=>
     {experimentID, pulseType, timeStamp, datas} = data
     id      = socket.id
