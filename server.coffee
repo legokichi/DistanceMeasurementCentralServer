@@ -161,7 +161,7 @@ startAll = ->
   io.of("/").emit("reload")
   next = ->
     applicative params, (data, i)->
-      applicative [1...N], (j)->
+      applicative [0...N], (j)->
         console.log i+1, j+1, "/",  params.length, N
         start(data)
     .then -> console.log "all task finished"
