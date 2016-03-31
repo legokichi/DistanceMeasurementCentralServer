@@ -1,6 +1,6 @@
 \chapter{提案手法の検証実験}
 %\section{信号検出性能}
-%距離、ダイレクトパスなしなどの状況を変えて
+%距離，ダイレクトパスなしなどの状況を変えて
 
 \section{同期手法の有効性}
 
@@ -123,11 +123,45 @@ MacBookAir13インチの幅は30cm程度あるため，推定距離の誤差を�
 また，三角形の一辺が大きいと，被験者がその三角形の外側の時には，みかけ音源の幅(ASW)が大きくなり，被験者が三角形の内側の時に音に包まれた感じ(LEV)を体験した．
 
 
+\clearpage
+
 \section{同期手法の比較}
 
+4つのパルスとその検出手法についてパラメータを変えて比較した．
+MacBook Pro (Retina, 13-inch, Late 2013) モデル，
+大きさ 35.89cm × 24.71cm × 1.80cm を図 \ref{fig:haichi1} \ref{fig:haichi2} のように設置した．
+表
+\ref{tab:hikaku1},
+\ref{tab:hikaku2},
+\ref{tab:hikaku3},
+\ref{tab:hikaku4},
+\ref{tab:hikaku5},
+\ref{tab:hikaku6},
+\ref{tab:hikaku7},
+\ref{tab:hikaku8},
+\ref{tab:hikaku9},
+\ref{tab:hikaku10},
+\ref{tab:hikaku11},
+\ref{tab:hikaku12},
+\ref{tab:hikaku13},
+\ref{tab:hikaku14},
+\ref{tab:hikaku15},
+\ref{tab:hikaku16},
+\ref{tab:hikaku17},
+\ref{tab:hikaku18},
+\ref{tab:hikaku19},
+\ref{tab:hikaku20},
+\ref{tab:hikaku21},
+\ref{tab:hikaku22},
+\ref{tab:hikaku23}
+の値の単位は メートル である．
+なお，M系列以外のパルス検出手法は通常の相関処理のみである．
 
-4つのパルスとその検出手法についてパラメータを変えて \ref{tab:hikaku} 比較した。
-MacBookPro を図 \ref{fig:haichi1} \ref{fig:haichi2} のように設置した。
+その結果，端末の向きによっては反射波の方が信号が強く，正しく距離が計測できないことがわかった．
+今回の実験の場合，図 \ref{fig:haichi2} のようにディスプレイを立てていたため，ディスプレイが遮蔽物となり，
+ダイレクトパスが存在しないようになってしまっていた．
+ダイレクトパスの存在する C-M 間， L-M 間に関しては正しく距離を取得できた．
+また、バーカー符号化チャープや M系列が優れていることが読み取れた．
 
 \begin{figure}[p]
   \centering
@@ -138,7 +172,7 @@ MacBookPro を図 \ref{fig:haichi1} \ref{fig:haichi2} のように設置した�
 \begin{figure}[p]
   \centering
   \includegraphics[clip,width=1.05\hsize]{img/haichi2.png}
-  \caption{端末位置}\label{fig:haichi2}
+  \caption{端末位置の図}\label{fig:haichi2}
 \end{figure}
 
 
@@ -148,135 +182,140 @@ MacBookPro を図 \ref{fig:haichi1} \ref{fig:haichi2} のように設置した�
 
 
 \begin{table}[p]\centering
-  \caption{比較手法}
-  \label{tab:hikaku}
-  \begin{tabular}{l|rrrrr}
+  \caption{バーカー符号, 符号長 13, 搬送波 137.8125 Hz}
+  \label{tab:hikaku1}
+  \begin{tabular}{rrrrrrrrrr}
     \hline
-    パルス \\
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 8.3079 & 0.3160 & 3.4385 & 6.3913 & 14.0009 & 28.1251 & 5.8721 \\
+     Y & C & 12.0819 & 0.4394 & 5.7360 & 11.6821 & 18.4638 & 30.3417 & 7.5983 \\
+     Y & M & 15.3975 & 3.9473 & 11.3024 & 13.7850 & 19.8689 & 35.7809 & 6.4078 \\
+     L & C & 12.2596 & 2.8294 & 8.1530 & 10.5238 & 16.7475 & 54.0299 & 6.4432 \\
+     L & M & 13.3628 & 0.3199 & 4.1632 & 16.9498 & 18.8464 & 30.8736 & 8.1134 \\
+     C & M & 6.3014 & 0.4587 & 1.5438 & 7.2124 & 8.2889 & 14.1242 & 3.6086 \\
     \hline
-    barker13,搬送波 4410/32 Hz   \\
-    barker13,搬送波 4410/16 Hz  \\
-    barker13,搬送波 4410/8 Hz  \\
-    chirp,持続時間 $2^{12}$  \\
-    chirp,持続時間 $2^{13}$  \\
-    chirp,持続時間 $2^{14}$  \\
-    chirp,持続時間 $2^{15}$  \\
-    chirp,持続時間 $2^{16}$  \\
-    barkerCodedChirp, 9個  \\
-    barkerCodedChirp, 10個  \\
-    barkerCodedChirp, 12個  \\
-    barkerCodedChirp, 13個  \\
-    barkerCodedChirp, 14個  \\
-    barkerCodedChirp, 15個  \\
-    mseq, 拡散符号長10, 搬送波 4410/4 Hz  \\
-    mseq, 拡散符号長10, 搬送波 4410/2 Hz  \\
-    mseq, 拡散符号長10, 搬送波 4410 Hz  \\
-    mseq, 拡散符号長11, 搬送波 4410/4 Hz  \\
-    mseq, 拡散符号長11, 搬送波 4410/2 Hz  \\
-    mseq, 拡散符号長11, 搬送波 4410 Hz  \\
-    mseq, 拡散符号長12, 搬送波 4410/4 Hz  \\
-    mseq, 拡散符号長12, 搬送波 4410/2 Hz  \\
-    mseq, 拡散符号長12, 搬送波 4410 Hz  \\
+  \end{tabular}
+\end{table}
+
+\begin{table}[p]\centering
+  \caption{バーカー符号, 符号長 13, 搬送波 275.625 Hz}
+  \label{tab:hikaku2}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 13.0916 & 0.2736 & 10.0361 & 11.9732 & 16.4381 & 31.1473 & 5.7348 \\
+     Y & C & 6.2573 & 0.5628 & 5.3736 & 5.7707 & 6.2034 & 12.3625 & 1.9726 \\
+     Y & M & 8.6099 & 3.5503 & 6.3104 & 8.3727 & 9.5745 & 16.0208 & 2.8276 \\
+     L & C & 11.4315 & 5.4893 & 8.1954 & 10.3503 & 14.1377 & 22.4122 & 4.4631 \\
+     L & M & 5.3282 & 5.3197 & 5.3274 & 5.3274 & 5.3312 & 5.3390 & 0.0038 \\
+     C & M & 10.2111 & 3.3383 & 6.4357 & 9.8395 & 12.4830 & 20.1609 & 3.9258 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\begin{table}[p]\centering
+  \caption{バーカー符号, 符号長 13, 搬送波 275.625 Hz}
+  \label{tab:hikaku3}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 9.3855 & 4.1555 & 5.7360 & 8.4074 & 12.1370 & 21.9496 & 4.0847 \\
+     Y & C & 9.0960 & 5.0344 & 5.3081 & 7.2490 & 12.0320 & 19.0430 & 4.2781 \\
+     Y & M & 11.5510 & 6.2333 & 8.7168 & 9.8858 & 13.3060 & 30.9083 & 4.5255 \\
+     L & C & 12.0083 & 6.2410 & 10.4226 & 11.3815 & 13.0805 & 23.0637 & 3.0506 \\
+     L & M & 6.0333 & 5.3197 & 5.3428 & 5.4160 & 5.5982 & 11.0442 & 1.3786 \\
+     C & M & 10.7734 & 4.2365 & 9.0088 & 10.7473 & 13.0901 & 21.3752 & 3.4007 \\
     \hline
   \end{tabular}
 \end{table}
 
 
-\clearpage
-
-
-
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/mseq_12_4410.png}
-  \caption{mseq 12 4410}\label{fig:mseqZ12Z4410}
-\end{figure}
-
-
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/barker_137-8125.png}
-  \caption{barker 137.8125}\label{fig:barkerZ137Z8125}
-\end{figure}
-
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/barkerCodedChirp_10.png}
-  \caption{barkerCodedChirp 10}\label{fig:barkerCodedChirpZ10}
-\end{figure}
-
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/chirp_32768.png}
-  \caption{chirp 32768}\label{fig:chirpZ32768}
-\end{figure}
-
-
 
 \clearpage
 
 
 
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/b137.png}
-  \caption{b137}\label{fig:b137}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{チャープ信号, 持続時間 0.0928 秒} % 2^12 4096
+  \label{tab:hikaku4}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 7.1880 & 0.2004 & 4.4437 & 6.7672 & 8.7390 & 28.1560 & 4.2851 \\
+     Y & C & 7.1117 & 0.1619 & 2.6627 & 5.4623 & 9.7268 & 29.2893 & 6.2086 \\
+     Y & M & 7.6896 & 0.0424 & 3.8143 & 5.9712 & 11.4258 & 35.2605 & 6.2242 \\
+     L & C & 7.9499 & 0.0192 & 2.4883 & 7.8253 & 11.0740 & 31.6678 & 6.5132 \\
+     L & M & 6.8154 & 0.1927 & 3.2159 & 6.1504 & 8.8363 & 22.2272 & 4.6882 \\
+     C & M & 6.6704 & 0.0115 & 2.4054 & 4.4215 & 8.7120 & 29.2083 & 6.2349 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/b275.png}
-  \caption{b275}\label{fig:b275}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{チャープ信号, 持続時間 0.1857 秒} % 2^13
+  \label{tab:hikaku5}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 11.0780 & 0.7709 & 7.9680 & 7.9757 & 10.9314 & 35.4070 & 7.6675 \\
+     Y & C & 7.9277 & 0.0424 & 5.4585 & 5.4700 & 8.4267 & 43.0859 & 6.9596 \\
+     Y & M & 9.0344 & 0.5589 & 3.4963 & 6.3990 & 12.4994 & 35.3453 & 7.2599 \\
+     L & C & 18.6643 & 0.4857 & 10.6895 & 11.9636 & 30.7397 & 50.0285 & 11.2425 \\
+     L & M & 7.2687 & 0.2544 & 5.7052 & 5.7861 & 9.4473 & 20.5503 & 4.3927 \\
+     C & M & 10.3575 & 0.0077 & 4.2943 & 5.2773 & 14.4866 & 38.8687 & 9.6867 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/b551.png}
-  \caption{b551}\label{fig:b551}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{チャープ信号, 持続時間 0.3715 秒} % 2^14
+  \label{tab:hikaku6}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 8.3642 & 7.2433 & 7.9718 & 7.9718 & 7.9718 & 44.2578 & 3.6154 \\
+     Y & C & 5.9163 & 5.3929 & 5.4623 & 5.4623 & 5.4662 & 41.7444 & 3.6926 \\
+     Y & M & 8.3457 & 6.2757 & 6.3412 & 6.3971 & 8.9086 & 54.9551 & 5.5016 \\
+     L & C & 11.5324 & 10.6857 & 10.6934 & 11.0596 & 11.0827 & 41.5247 & 4.2242 \\
+     L & M & 5.7736 & 5.7013 & 5.7784 & 5.7823 & 5.7861 & 5.8015 & 0.0268 \\
+     C & M & 8.0100 & 4.3251 & 4.3897 & 4.4658 & 5.4671 & 64.7117 & 12.9083 \\
+    \hline
+  \end{tabular}
+\end{table}
 
+\begin{table}[p]\centering
+  \caption{チャープ信号, 持続時間 0.7430 秒} % 2^15
+  \label{tab:hikak7}
+  \begin{tabular}{l|rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 7.9711 & 7.9680 & 7.9718 & 7.9718 & 7.9718 & 7.9718 & 0.0015 \\
+     Y & C & 5.4669 & 5.4585 & 5.4623 & 5.4623 & 5.4623 & 5.5548 & 0.0209 \\
+     Y & M & 9.5821 & 2.1702 & 8.9047 & 9.4945 & 9.7219 & 27.6201 & 2.9328 \\
+     L & C & 11.3977 & 10.6857 & 11.0596 & 11.0789 & 11.1213 & 48.5752 & 3.7399 \\
+     L & M & 6.8083 & 5.1886 & 5.7784 & 5.7823 & 5.7823 & 87.3090 & 8.2321 \\
+     C & M & 5.0841 & 3.7777 & 4.3945 & 4.4003 & 5.5047 & 21.8956 & 2.3629 \\
 
+    \hline
+  \end{tabular}
+\end{table}
 
-\clearpage
-
-
-
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/c4096.png}
-  \caption{c4096}\label{fig:c4096}
-\end{figure}
-
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/c8192.png}
-  \caption{c8192}\label{fig:c8192}
-\end{figure}
-
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/c16384.png}
-  \caption{c16384}\label{fig:c16384}
-\end{figure}
-
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/c32768.png}
-  \caption{c32768}\label{fig:c32768}
-\end{figure}
-
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/c65536.png}
-  \caption{c65536}\label{fig:c65536}
-\end{figure}
-
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/c65536.png}
-  \caption{c65536}\label{fig:c65536}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{チャープ信号, 持続時間 1.4860 秒} % 2^16
+  \label{tab:hikaku8}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 7.9699 & 7.9680 & 7.9680 & 7.9718 & 7.9718 & 7.9718 & 0.0019 \\
+     Y & C & 5.4475 & 5.3814 & 5.4585 & 5.4585 & 5.4594 & 5.5394 & 0.0256 \\
+     Y & M & 10.9246 & 9.0666 & 9.4974 & 12.0002 & 12.2276 & 12.6015 & 1.2912 \\
+     L & C & 10.9893 & 10.6818 & 11.0519 & 11.0712 & 11.0750 & 11.1367 & 0.1640 \\
+     L & M & 7.6331 & 5.7746 & 5.7784 & 5.7823 & 5.7823 & 190.9358 & 18.4226 \\
+     C & M & 5.3769 & 4.3945 & 5.5047 & 5.5240 & 5.5278 & 5.5278 & 0.3648 \\
+    \hline
+  \end{tabular}
+\end{table}
 
 
 
@@ -284,108 +323,265 @@ MacBookPro を図 \ref{fig:haichi1} \ref{fig:haichi2} のように設置した�
 
 
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/bcc9.png}
-  \caption{bcc9}\label{fig:bcc9}
-\end{figure}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/bcc12.png}
-  \caption{bcc12}\label{fig:bcc12}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{バーカー13符号化チャープ信号, チャープ 9個}
+  \label{tab:hikaku9}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 4.0906 & 0.0424 & 0.6524 & 3.4346 & 7.3136 & 9.8337 & 3.2228 \\
+     Y & C & 4.9673 & 0.0077 & 5.4623 & 5.4662 & 5.4700 & 10.5700 & 1.5206 \\
+     Y & M & 51.0292 & 2.6868 & 19.8256 & 61.1325 & 76.4113 & 90.2850 & 28.7467 \\
+     L & C & 10.2156 & 3.8433 & 10.6847 & 10.6895 & 10.6934 & 13.6424 & 1.2324 \\
+     L & M & 44.9646 & 0.7825 & 13.5537 & 57.4492 & 69.2653 & 89.6721 & 29.0069 \\
+     C & M & 48.2967 & 1.1179 & 9.4087 & 60.6468 & 77.3104 & 90.3544 & 32.6956 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/bcc13.png}
-  \caption{bcc13}\label{fig:bcc13}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{バーカー13符号化チャープ信号, チャープ 10個}
+  \label{tab:hikaku10}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 11.4374 & 0.0192 & 6.9435 & 7.2394 & 14.6003 & 30.3571 & 9.0931 \\
+     Y & C & 4.8010 & 0.3199 & 5.4585 & 5.4662 & 5.4671 & 6.8963 & 1.4232 \\
+     Y & M & 37.3681 & 3.7970 & 11.5588 & 22.5298 & 67.3109 & 94.3095 & 28.4393 \\
+     L & C & 9.1453 & 2.4632 & 8.5231 & 8.5231 & 8.5269 & 24.7020 & 2.5181 \\
+     L & M & 37.8836 & 3.9473 & 5.8006 & 16.0131 & 75.6808 & 93.6233 & 33.2371 \\
+     C & M & 34.5847 & 0.2043 & 13.5893 & 25.4537 & 53.6762 & 98.6693 & 26.9288 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/bcc14.png}
-  \caption{bcc14}\label{fig:bcc14}
-\end{figure}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/bcc15.png}
-  \caption{bcc15}\label{fig:bcc15}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{バーカー13符号化チャープ信号, チャープ 12個}
+  \label{tab:hikaku11}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 8.8653 & 3.1108 & 7.9680 & 7.9680 & 7.9680 & 62.0249 & 6.7141 \\
+     Y & C & 6.6034 & 5.4585 & 5.4613 & 5.4623 & 5.4623 & 59.5154 & 7.1183 \\
+     Y & M & 9.9929 & 1.4995 & 6.3335 & 6.3913 & 6.3952 & 133.8181 & 15.4395 \\
+     L & C & 9.4122 & 8.4383 & 8.5192 & 8.5192 & 10.6818 & 11.0750 & 1.1259 \\
+     L & M & 6.8974 & 5.6975 & 5.7013 & 5.7052 & 5.7052 & 45.1868 & 5.2801 \\
+     C & M & 5.9584 & 3.4231 & 4.3907 & 4.3945 & 4.4600 & 43.8761 & 6.2283 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\begin{table}[p]\centering
+  \caption{バーカー13符号化チャープ信号, チャープ 13個}
+  \label{tab:hikaku12}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 7.9675 & 7.9641 & 7.9680 & 7.9680 & 7.9680 & 7.9718 & 0.0022 \\
+     Y & C & 5.4660 & 5.4546 & 5.4585 & 5.4585 & 5.4623 & 5.5510 & 0.0248 \\
+     Y & M & 6.5096 & 6.3297 & 6.3335 & 6.3913 & 6.3952 & 9.7181 & 0.6554 \\
+     L & C & 10.7643 & 10.6702 & 10.6770 & 10.6799 & 10.6818 & 11.0712 & 0.1627 \\
+     L & M & 5.7688 & 5.6975 & 5.7784 & 5.7823 & 5.7900 & 5.7938 & 0.0331 \\
+     C & M & 4.4087 & 4.3367 & 4.3907 & 4.3945 & 4.4726 & 4.4986 & 0.0534 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\begin{table}[p]\centering
+  \caption{バーカー13符号化チャープ信号, チャープ 14個}
+  \label{tab:hikaku13}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 7.9609 & 7.9487 & 7.9603 & 7.9603 & 7.9603 & 7.9641 & 0.0019 \\
+     Y & C & 5.4509 & 5.4469 & 5.4507 & 5.4507 & 5.4507 & 5.4546 & 0.0013 \\
+     Y & M & 9.9721 & 6.3297 & 8.8931 & 9.4868 & 11.9925 & 12.2238 & 1.9315 \\
+     L & C & 10.8703 & 10.6548 & 10.6625 & 10.8187 & 11.0557 & 11.1213 & 0.2083 \\
+     L & M & 5.7740 & 5.7668 & 5.7746 & 5.7746 & 5.7746 & 5.7746 & 0.0014 \\
+     C & M & 5.0327 & 4.3367 & 4.3945 & 5.5009 & 5.5240 & 5.5240 & 0.5530 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\begin{table}[p]\centering
+  \caption{バーカー13符号化チャープ信号, チャープ 15個}
+  \label{tab:hikaku14}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 7.9633 & 7.9603 & 7.9603 & 7.9641 & 7.9641 & 7.9680 & 0.0023 \\
+     Y & C & 5.4680 & 5.4430 & 5.4469 & 5.4507 & 5.4517 & 5.6126 & 0.0350 \\
+     Y & M & 10.7852 & 9.4907 & 9.7181 & 9.7219 & 12.2276 & 12.2315 & 1.2546 \\
+     L & C & 53.8493 & 10.6510 & 32.1910 & 74.1986 & 74.2179 & 74.2448 & 22.5434 \\
+     L & M & 5.7744 & 5.7707 & 5.7746 & 5.7746 & 5.7746 & 5.7784 & 0.0020 \\
+     C & M & 19.8178 & 4.5603 & 5.6011 & 5.6666 & 5.6705 & 131.8521 & 27.1353 \\
+    \hline
+  \end{tabular}
+\end{table}
+
 
 
 \clearpage
 
 
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/m10_1102.png}
-  \caption{m10 1102}\label{fig:m10Z1102}
-\end{figure}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/m10_2205.png}
-  \caption{m10 2205}\label{fig:m10Z2205}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{M系列, 拡散符号長 10, 搬送波 1102.5 Hz}
+  \label{tab:hikaku15}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 3.3051 & 3.0761 & 3.2458 & 3.3190 & 3.3498 & 4.5294 & 0.1598 \\
+     Y & C & 4.7328 & 4.2249 & 4.3020 & 4.3116 & 5.3968 & 5.4700 & 0.5449 \\
+     Y & M & 5.7826 & 5.4507 & 5.4893 & 5.5009 & 6.3528 & 6.3682 & 0.4082 \\
+     L & C & 5.8796 & 5.4469 & 5.5433 & 5.5683 & 6.3566 & 6.4993 & 0.4065 \\
+     L & M & 5.1215 & 4.3675 & 4.4485 & 5.4546 & 5.4623 & 5.4700 & 0.4854 \\
+     C & M & 3.6820 & 3.2188 & 3.2448 & 3.2689 & 4.3097 & 5.9442 & 0.6242 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/m10_4410.png}
-  \caption{m10 4410}\label{fig:m10Z4410}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{M系列, 拡散符号長 10, 搬送波 2205 Hz}
+  \label{tab:hikaku16}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 3.8972 & 2.9952 & 3.1378 & 3.1841 & 3.1995 & 75.0582 & 7.1168 \\
+     Y & C & 5.9203 & 3.5195 & 5.2233 & 5.2349 & 5.2464 & 72.8841 & 6.6992 \\
+     Y & M & 6.5137 & 1.1526 & 5.3428 & 6.2140 & 6.4530 & 64.8621 & 5.9753 \\
+     L & C & 6.2645 & 6.2063 & 6.2333 & 6.2487 & 6.2988 & 6.3142 & 0.0330 \\
+     L & M & 5.5233 & 5.3775 & 5.5317 & 5.5471 & 5.5625 & 5.5780 & 0.0621 \\
+     C & M & 3.2016 & 2.9952 & 3.0646 & 3.2111 & 3.2380 & 4.2827 & 0.2344 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/m11_1102.png}
-  \caption{m11 1102}\label{fig:m11Z1102}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{M系列, 拡散符号長 10, 搬送波 4410 Hz}
+  \label{tab:hikaku17}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 3.8377 & 0.3315 & 3.1571 & 3.2612 & 4.0967 & 8.0065 & 1.7070 \\
+     Y & C & 5.5377 & 5.5163 & 5.5317 & 5.5394 & 5.5433 & 5.5587 & 0.0091 \\
+     Y & M & 6.3170 & 6.2603 & 6.2795 & 6.3258 & 6.3306 & 6.5147 & 0.0390 \\
+     L & C & 7.1674 & 4.2673 & 6.3952 & 7.2818 & 8.3265 & 10.0034 & 1.0616 \\
+     L & M & 5.3974 & 5.3043 & 5.3467 & 5.3891 & 5.3968 & 7.0621 & 0.1722 \\
+     C & M & 3.5854 & 2.0315 & 3.3103 & 3.3653 & 3.3893 & 4.6836 & 0.5222 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/m11_2205.png}
-  \caption{m11 2205}\label{fig:m11Z2205}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{M系列, 拡散符号長 11, 搬送波 1102.5 Hz}
+  \label{tab:hikaku18}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 4.0548 & 3.2458 & 3.2535 & 3.2573 & 3.5349 & 64.0718 & 6.2161 \\
+     Y & C & 4.9653 & 4.2287 & 4.2519 & 4.3174 & 4.3251 & 61.1151 & 5.8193 \\
+     Y & M & 7.0129 & 6.3374 & 6.3451 & 6.3489 & 6.3528 & 63.2238 & 5.8249 \\
+     L & C & 5.6477 & 5.4315 & 5.4623 & 5.4893 & 5.5375 & 6.4800 & 0.3642 \\
+     L & M & 5.4479 & 5.4353 & 5.4469 & 5.4469 & 5.4507 & 5.4546 & 0.0038 \\
+     C & M & 3.2534 & 3.2419 & 3.2496 & 3.2535 & 3.2573 & 3.2920 & 0.0059 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/m11_4410.png}
-  \caption{m11 4410}\label{fig:m11Z4410}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{M系列, 拡散符号長 11, 搬送波 2205 Hz}
+  \label{tab:hikaku19}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 3.2698 & 3.1532 & 3.2024 & 3.2072 & 3.4125 & 3.4269 & 0.1020 \\
+     Y & C & 5.3347 & 5.2272 & 5.2657 & 5.2696 & 5.4777 & 5.4931 & 0.1005 \\
+     Y & M & 6.3011 & 6.1909 & 6.2333 & 6.2371 & 6.4414 & 6.4646 & 0.1008 \\
+     L & C & 6.2200 & 6.2102 & 6.2179 & 6.2217 & 6.2217 & 6.2333 & 0.0041 \\
+     L & M & 5.4250 & 5.3582 & 5.4238 & 5.4238 & 5.4276 & 5.4353 & 0.0085 \\
+     C & M & 3.2507 & 3.0839 & 3.2303 & 3.2342 & 3.2342 & 4.2943 & 0.1869 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/m12_1102.png}
-  \caption{m12 1102}\label{fig:m12Z1102}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{M系列, 拡散符号長 11, 搬送波 4410 Hz}
+  \label{tab:hikaku20}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 4.6453 & 2.9913 & 4.0013 & 4.0668 & 4.0746 & 52.0061 & 4.8148 \\
+     Y & C & 6.1619 & 4.8648 & 5.5587 & 5.5625 & 5.5702 & 66.0301 & 6.0173 \\
+     Y & M & 6.2181 & 3.1455 & 6.2786 & 6.2795 & 6.2950 & 7.9757 & 0.5407 \\
+     L & C & 6.6194 & 5.3120 & 6.3403 & 6.4010 & 6.4106 & 8.4267 & 0.6834 \\
+     L & M & 5.3521 & 5.3312 & 5.3390 & 5.3428 & 5.3544 & 5.4045 & 0.0181 \\
+     C & M & 3.3974 & 3.0337 & 3.3267 & 3.3306 & 3.3614 & 4.5795 & 0.2954 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/m12_2205.png}
-  \caption{m12 2205}\label{fig:m12Z2205}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{M系列, 拡散符号長 12, 搬送波 1102.5 Hz}
+  \label{tab:hikaku21}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 3.3200 & 3.2380 & 3.2458 & 3.3306 & 3.3421 & 3.5580 & 0.0864 \\
+     Y & C & 4.6963 & 4.2943 & 4.3058 & 4.3136 & 5.3091 & 5.4700 & 0.5137 \\
+     Y & M & 6.3485 & 5.3659 & 6.3566 & 6.3566 & 6.3605 & 6.3682 & 0.0988 \\
+     L & C & 5.7382 & 5.4160 & 5.4623 & 5.4700 & 6.3605 & 6.4183 & 0.4249 \\
+     L & M & 5.4368 & 5.4199 & 5.4315 & 5.4392 & 5.4392 & 5.4507 & 0.0061 \\
+     C & M & 3.3004 & 3.2959 & 3.2997 & 3.2997 & 3.3036 & 3.3074 & 0.0029 \\
+    \hline
+  \end{tabular}
+\end{table}
 
-\begin{figure}[p]
-  \centering
-  \includegraphics[clip,width=1.05\hsize]{img/m12_4410.png}
-  \caption{m12 4410}\label{fig:m12Z4410}
-\end{figure}
+\begin{table}[p]\centering
+  \caption{M系列, 拡散符号長 12, 搬送波 2205 Hz}
+  \label{tab:hikaku22}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 3.1957 & 3.0761 & 3.1995 & 3.2034 & 3.2072 & 3.2149 & 0.0219 \\
+     Y & C & 5.2460 & 5.1886 & 5.2349 & 5.2387 & 5.2657 & 5.2811 & 0.0172 \\
+     Y & M & 6.2194 & 6.1678 & 6.2140 & 6.2179 & 6.2256 & 6.2371 & 0.0087 \\
+     L & C & 6.2416 & 6.2063 & 6.2217 & 6.2487 & 6.2526 & 6.2641 & 0.0169 \\
+     L & M & 5.4104 & 3.7238 & 5.4199 & 5.4238 & 5.4238 & 5.4353 & 0.1452 \\
+     C & M & 3.1785 & 3.0222 & 3.1725 & 3.1764 & 3.2091 & 3.2496 & 0.0564 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\begin{table}[p]\centering
+  \caption{M系列, 拡散符号長 12, 搬送波 4410 Hz}
+  \label{tab:hikaku23}
+  \begin{tabular}{rrrrrrrrrr}
+    \hline
+     A & B & 平均 & 最小値 & 第2四分位 & 中央値 & 第3四分位 & 最大値 & 標準偏差 \\
+     Y & L & 6.2225 & 2.4401 & 4.0668 & 6.8963 & 7.5709 & 51.1696 & 4.8938 \\
+     Y & C & 6.0069 & 5.5394 & 5.5587 & 5.5625 & 5.5664 & 49.6739 & 4.4110 \\
+     Y & M & 6.7098 & 2.0006 & 6.3181 & 6.3219 & 6.3297 & 48.9260 & 4.2863 \\
+     L & C & 7.0030 & 6.2795 & 6.3913 & 6.3990 & 8.3303 & 8.4229 & 0.8714 \\
+     L & M & 5.3791 & 5.3351 & 5.3736 & 5.3814 & 5.3852 & 5.4006 & 0.0096 \\
+     C & M & 3.3599 & 3.1648 & 3.3537 & 3.3653 & 3.3730 & 3.3884 & 0.0249 \\
+    \hline
+  \end{tabular}
+\end{table}
 
 
 
 
 \clearpage
-
-
-
 
 
 \begin{comment}
 
-MacBook Pro (Retina, 13-inch, Late 2013)
-35.89cm × 24.71cm × 1.80cm (15")
+
+
 
 
 str(len(v2))
@@ -572,3 +768,198 @@ barker 	 551.25 	 100
 100 	 lime___ 	 yellow_ 	 9.38558049887 	 9.38558049887 	 8.4074829932 	 5.73605442177 	 8.4074829932 	 12.1370748299 	 17.7941043084 	 21.9496598639 	 4.15555555556 	 16.6848054937 	 4.08470384406
 100 	 magenta 	 yellow_ 	 11.5510566893 	 11.5510566893 	 9.8858276644 	 8.71683673469 	 9.8858276644 	 13.3060657596 	 24.6750566893 	 30.9083900227 	 6.23333333333 	 20.4808784331 	 4.52558045261
 \end{comment}
+
+
+
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/barker_137-8125.png}
+  \caption{バーカー符号, 符号長 13, 搬送波 137.8125 Hz}\label{fig:barkerZ137Z8125}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/chirp_32768.png}
+  \caption{チャープ信号, 持続時間 0.7430 秒}\label{fig:chirpZ32768}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/barkerCodedChirp_10.png}
+  \caption{バーカー符号化チャープ, 符号長 13, チャープ 10個}\label{fig:barkerCodedChirpZ10}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/mseq_12_4410.png}
+  \caption{M系列, 拡散符号長12, 搬送波 4410 Hz}\label{fig:mseqZ12Z4410}
+\end{figure}
+
+
+
+
+\clearpage
+
+
+
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/b137.png}
+  \caption{バーカー符号, 符号長 13, 搬送波 137.8125 Hz}\label{fig:b137}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/b275.png}
+  \caption{バーカー符号, 符号長 13, 搬送波 275.625 Hz}\label{fig:b275}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/b551.png}
+  \caption{バーカー符号, 符号長 13, 搬送波 551.25 Hz}\label{fig:b551}
+\end{figure}
+
+
+
+\clearpage
+
+
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/c4096.png}
+  \caption{チャープ信号, 持続時間 0.0928 秒}\label{fig:c4096}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/c8192.png}
+  \caption{チャープ信号, 持続時間 0.1857 秒}\label{fig:c8192}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/c16384.png}
+  \caption{チャープ信号, 持続時間 0.3715 秒}\label{fig:c16384}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/c32768.png}
+  \caption{チャープ信号, 持続時間 0.7430 秒}\label{fig:c32768}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/c65536.png}
+  \caption{チャープ信号, 持続時間 1.4860 秒}\label{fig:c65536}
+\end{figure}
+
+
+
+\clearpage
+
+
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/bcc9.png}
+  \caption{バーカー符号化チャープ, 符号長 13, チャープ 9個}\label{fig:bcc9}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/bcc10.png}
+  \caption{バーカー符号化チャープ, 符号長 13, チャープ 10個}\label{fig:bcc10}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/bcc12.png}
+  \caption{バーカー符号化チャープ, 符号長 13, チャープ 12個}\label{fig:bcc12}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/bcc13.png}
+  \caption{バーカー符号化チャープ, 符号長 13, チャープ 13個}\label{fig:bcc13}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/bcc14.png}
+  \caption{バーカー符号化チャープ, 符号長 13, チャープ 14個}\label{fig:bcc14}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/bcc15.png}
+  \caption{バーカー符号化チャープ, 符号長 13, チャープ 15個}\label{fig:bcc15}
+\end{figure}
+
+
+\clearpage
+
+
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/m10_1102.png}
+  \caption{M系列, 拡散符号長10, 搬送波 1102.5 Hz}\label{fig:m10Z1102}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/m10_2205.png}
+  \caption{M系列, 拡散符号長10, 搬送波 2205 Hz}\label{fig:m10Z2205}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/m10_4410.png}
+  \caption{M系列, 拡散符号長10, 搬送波 4410 Hz}\label{fig:m10Z4410}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/m11_1102.png}
+  \caption{M系列, 拡散符号長11, 搬送波 1102.5 Hz}\label{fig:m11Z1102}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/m11_2205.png}
+  \caption{M系列, 拡散符号長11, 搬送波 2205 Hz}\label{fig:m11Z2205}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/m11_4410.png}
+  \caption{M系列, 拡散符号長11, 搬送波 4410 Hz}\label{fig:m11Z4410}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/m12_1102.png}
+  \caption{M系列, 拡散符号長12, 搬送波 1102.5 Hz}\label{fig:m12Z1102}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/m12_2205.png}
+  \caption{M系列, 拡散符号長12, 搬送波 2205 Hz}\label{fig:m12Z2205}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[clip,width=1.05\hsize]{img/m12_4410.png}
+  \caption{M系列, 拡散符号長12, 搬送波 4410 Hz}\label{fig:m12Z4410}
+\end{figure}
+
+
+
+
+\clearpage

@@ -21,6 +21,7 @@ for _type, varis in o.items():
                 for color2, v2 in v1.items():
                     mtx[color1][color2].append(v2)
         s = set()
+        print("")
         print(_type
             ,"\t",key
         #    ,"\t",len(arr)
@@ -34,25 +35,28 @@ for _type, varis in o.items():
                 #if color1 == "yellow": color1 += "_"
                 #if color2 == "yellow": color2 += "_"
                 a = np.array(v2)
+                # 端末1 & 端末2 & 平均 & 最小値 & 第２四分位 & 中央値 & 第３四分位 & 最大値 & 標準偏差 \\
                 print(
                     #_type
                     #+"-"+key
                     #+"-"+str(len(arr))
                     #+"-"+
-                    str(len(v2))
-                    ,"\t",color1
-                    +"-"+color2
+                    #str(len(v2))
+                    #,"\t",
+                    color1
+                    ,"&",color2
                     #,"\t",np.average(a)  ## 平均
-                    #,"\t",np.mean(a)       ## 算術平均
+                    ,"&",np.mean(a)       ## 算術平均
                     #,"\t",np.median(a)     ## 中央値
-                    ,"\t",np.amin(a)       ## 最小値
-                    ,"\t",stats.scoreatpercentile(a, 25) #第2四分位
-                    #,"\t",stats.scoreatpercentile(a, 50) #中央値
-                    ,"\t",stats.scoreatpercentile(a, 75) #第3四分位
-                    ,"\t",np.amax(a)       ## 最大値
+                    ,"&",np.amin(a)       ## 最小値
+                    ,"&",stats.scoreatpercentile(a, 25) #第2四分位
+                    ,"&",stats.scoreatpercentile(a, 50) #中央値
+                    ,"&",stats.scoreatpercentile(a, 75) #第3四分位
+                    ,"&",np.amax(a)       ## 最大値
                     #,"\t",np.ptp(a)        ## 値の範囲(最大値-最小値)
                     #,"\t",np.var(a)        ## 分散
-                    #,"\t",np.std(a)        ## 標準偏差
+                    ,"&",np.std(a)        ## 標準偏差
+                    ,"\\\\"
                 )
 
 
